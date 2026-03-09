@@ -1,6 +1,7 @@
 # afm-ts-sdk
 
 [![npm](https://img.shields.io/npm/v/afm-ts-sdk)](https://www.npmjs.com/package/afm-ts-sdk)
+[![Tests](https://github.com/codybrom/afm-ts-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/codybrom/afm-ts-sdk/actions/workflows/test.yml)
 [![license](https://img.shields.io/npm/l/afm-ts-sdk)](LICENSE.md)
 
 TypeScript/Node.js SDK for accessing Apple's [Foundation Models framework](https://developer.apple.com/documentation/foundationmodels). On-device Apple Intelligence inference in Node without an API gateway or local server.
@@ -27,10 +28,7 @@ Wraps the same C bridge used by [`apple/python-apple-fm-sdk`](https://github.com
 npm install afm-ts-sdk
 ```
 
-A prebuilt `libFoundationModels.dylib` is bundled with the npm package. Xcode not required.
-
-> **Rebuilding from source**
-> If the prebuilt dylib doesn't work on your system, run `npm run build` (requires Xcode 26+). The build script clones Apple's SDK and compiles the dylib locally.
+Xcode not required. A prebuilt `libFoundationModels.dylib` is bundled with the npm package. If your Mac needs a different Dylib, install from source. (See [Development](#development))
 
 ## Quick start
 
@@ -215,6 +213,52 @@ try {
 | `InvalidGenerationSchemaError` | malformed `GenerationSchema` |
 | `UnsupportedLanguageOrLocaleError` | language not supported |
 | `ToolCallError` | tool threw during `call()` |
+
+## Examples
+
+Runnable examples are in the [`examples/`](examples/) directory:
+
+| Example | Description |
+| --- | --- |
+| [basic](examples/basic/) | Simple prompt and response |
+| [streaming](examples/streaming/) | Token-by-token streaming |
+| [structured-output](examples/structured-output/) | Typed schemas with `GenerationSchema` |
+| [json-schema](examples/json-schema/) | JSON Schema-based structured output |
+| [tools](examples/tools/) | Tool calling |
+| [generation-options](examples/generation-options/) | Temperature, token limits, sampling |
+| [transcript](examples/transcript/) | Session history persistence |
+| [content-tagging](examples/content-tagging/) | Content tagging use case |
+
+Run any example with:
+
+```bash
+npx tsx examples/basic/basic.ts
+```
+
+## Development
+
+### Testing
+
+Tests use [Vitest](https://vitest.dev) with [v8 coverage](https://vitest.dev/guide/coverage).
+
+```bash
+npm test                    # run all tests
+npm run test:unit           # unit tests only
+npm run test:integration    # integration tests (requires macOS 26 + Apple Intelligence)
+```
+
+Unit tests mock the FFI layer so they work on any machine. Integration tests hit the real on-device model, so you need macOS 26 with Apple Intelligence to run those.
+
+### Building from source
+
+```bash
+npm run build    # clones code from Apple's Python SDK, compiles dylib, then runs tsc
+npm run dev      # tsc --watch
+npm run lint     # eslint
+npm run format   # prettier
+```
+
+The build script requires Xcode 26+ to compile `native/libFoundationModels.dylib` locally.
 
 ## Contributing
 

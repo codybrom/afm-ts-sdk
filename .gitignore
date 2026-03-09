@@ -5,3 +5,5 @@ build-native.log
 foundation-models-c
 .build
 native/
+coverage
+.vscode/settings.json
