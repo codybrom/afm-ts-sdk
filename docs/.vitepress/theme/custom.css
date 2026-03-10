@@ -1,0 +1,169 @@
+:root {
+  /* Typography — Apple system font stack (from Apple dev docs) */
+  --vp-font-family-base:
+    "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Helvetica",
+    "Arial", sans-serif;
+  --vp-font-family-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
+
+  /* Brand — Foundation Models green/teal (darkened for white bg contrast) */
+  --vp-c-brand-1: #1a7f3f;
+  --vp-c-brand-2: #1b8f48;
+  --vp-c-brand-3: #146832;
+  --vp-c-brand-soft: rgba(26, 127, 63, 0.1);
+
+  /* Surfaces — Apple dev docs palette */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-soft: #f5f5f7;
+  --vp-c-bg-mute: #e8e8ed;
+
+  /* Text — Apple gray scale */
+  --vp-c-text-1: #1d1d1f;
+  --vp-c-text-2: #6e6e73;
+  --vp-c-text-3: #86868b;
+
+  /* Home hero gradient — matches the FM icon */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #6dd57e 0%, #30b8d0 100%);
+  --vp-home-hero-image-background-image: linear-gradient(
+    135deg,
+    rgba(109, 213, 126, 0.25) 0%,
+    rgba(48, 184, 208, 0.25) 100%
+  );
+  --vp-home-hero-image-filter: blur(56px);
+
+  /* Buttons */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: #1a7f3f;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: #1b8f48;
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: #146832;
+
+  /* Code — Apple dev docs style */
+  --vp-code-block-bg: #f5f5f7;
+  --vp-c-default-soft: rgba(142, 150, 170, 0.1);
+
+  /* Aside / callout border radius (Apple uses 15px) */
+  --vp-custom-block-tip-border: rgba(26, 127, 63, 0.4);
+  --vp-custom-block-tip-bg: rgba(26, 127, 63, 0.05);
+}
+
+.dark {
+  --vp-c-bg: #000000;
+  --vp-c-bg-soft: #1c1c1e;
+  --vp-c-bg-mute: #2c2c2e;
+  --vp-c-text-1: #f5f5f7;
+  --vp-c-text-2: #a1a1a6;
+  --vp-c-text-3: #86868b;
+
+  --vp-c-brand-1: #6dd57e;
+  --vp-c-brand-2: #5ec76e;
+  --vp-c-brand-3: #30b8d0;
+  --vp-c-brand-soft: rgba(109, 213, 126, 0.12);
+
+  --vp-button-brand-bg: #6dd57e;
+  --vp-button-brand-text: #1c1c1e;
+  --vp-button-brand-hover-bg: #5ec76e;
+  --vp-button-brand-hover-text: #1c1c1e;
+  --vp-button-brand-active-bg: #4ab85e;
+  --vp-button-brand-active-text: #1c1c1e;
+
+  --vp-code-block-bg: #1c1c1e;
+}
+
+/* Body text — Apple-style readability */
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.5294117647;
+  letter-spacing: -0.022em;
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: -0.01em;
+}
+
+/* Code blocks — Apple dev docs rounded style */
+.vp-doc div[class*="language-"] {
+  border-radius: 15px;
+}
+
+.vp-doc :not(pre) > code {
+  border-radius: 4px;
+}
+
+/* Hero */
+.VPHero .VPImage {
+  border-radius: 20px;
+  max-width: 192px;
+  max-height: 192px;
+}
+
+@media (min-width: 960px) {
+  .VPHero .VPImage {
+    max-width: 256px;
+    max-height: 256px;
+  }
+}
+
+.VPHero .name {
+  font-weight: 700;
+}
+
+.VPHero .text {
+  font-weight: 400;
+  color: var(--vp-c-text-2);
+}
+
+/* Feature cards — Apple card style */
+.VPFeature {
+  border-radius: 18px;
+  transition:
+    box-shadow 0.16s ease-out,
+    transform 0.16s ease-out;
+}
+
+.VPFeature:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  transform: scale(1.007);
+}
+
+.dark .VPFeature:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .VPFeature:hover {
+    transform: none;
+  }
+}
+
+/* Nav — Apple-style blur when sticking */
+.VPNav {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Buttons — Apple border radius */
+.VPButton {
+  border-radius: 18px !important;
+}
+
+/* Sidebar — tighter, cleaner */
+.VPSidebar .group + .group {
+  padding-top: 0.5rem;
+}
+
+/* Smooth transitions */
+a,
+.VPButton,
+.VPNavBarMenuLink {
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}

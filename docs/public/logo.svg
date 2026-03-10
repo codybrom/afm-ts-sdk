@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6dd57e" />
+      <stop offset="100%" stop-color="#30b8d0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)" />
+
+  <!-- Neural network lattice — symmetric octahedron -->
+  <g fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.2" stroke-linecap="round">
+    <!-- Top node to upper row -->
+    <line x1="64" y1="24" x2="36" y2="48" />
+    <line x1="64" y1="24" x2="92" y2="48" />
+
+    <!-- Upper row horizontal -->
+    <line x1="36" y1="48" x2="92" y2="48" />
+
+    <!-- Upper row to center -->
+    <line x1="36" y1="48" x2="64" y2="64" />
+    <line x1="92" y1="48" x2="64" y2="64" />
+
+    <!-- Top to center -->
+    <line x1="64" y1="24" x2="64" y2="64" />
+
+    <!-- Upper row cross to middle row -->
+    <line x1="36" y1="48" x2="92" y2="80" />
+    <line x1="92" y1="48" x2="36" y2="80" />
+
+    <!-- Upper row to middle row (verticals) -->
+    <line x1="36" y1="48" x2="36" y2="80" />
+    <line x1="92" y1="48" x2="92" y2="80" />
+
+    <!-- Middle row horizontal -->
+    <line x1="36" y1="80" x2="92" y2="80" />
+
+    <!-- Center to middle row -->
+    <line x1="64" y1="64" x2="36" y2="80" />
+    <line x1="64" y1="64" x2="92" y2="80" />
+
+    <!-- Bottom to center -->
+    <line x1="64" y1="104" x2="64" y2="64" />
+
+    <!-- Middle row to bottom -->
+    <line x1="36" y1="80" x2="64" y2="104" />
+    <line x1="92" y1="80" x2="64" y2="104" />
+  </g>
+
+  <!-- Nodes -->
+  <g fill="white" stroke="rgba(255,255,255,0.9)" stroke-width="1.5">
+    <circle cx="64" cy="24" r="5.5" />
+    <circle cx="36" cy="48" r="5.5" />
+    <circle cx="92" cy="48" r="5.5" />
+    <circle cx="64" cy="64" r="5.5" />
+    <circle cx="36" cy="80" r="5.5" />
+    <circle cx="92" cy="80" r="5.5" />
+    <circle cx="64" cy="104" r="5.5" />
+  </g>
+</svg>
