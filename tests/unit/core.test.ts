@@ -176,4 +176,13 @@ describe("SystemLanguageModel", () => {
       expect(mockFns.FMRelease).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("Symbol.dispose", () => {
+    it("delegates to dispose()", () => {
+      const model = new SystemLanguageModel();
+      model[Symbol.dispose]();
+      expect(model._nativeModel).toBeNull();
+      expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-model-pointer");
+    });
+  });
 });

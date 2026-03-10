@@ -12,6 +12,7 @@ import {
   ConcurrentRequestsError,
   RefusalError,
   InvalidGenerationSchemaError,
+  ServiceCrashedError,
   GenerationError,
   FoundationModelsError,
   ToolCallError,
@@ -115,6 +116,29 @@ describe("statusToError", () => {
     const err = statusToError(999, "something went wrong");
     expect(err.message).toBe("Unknown error (code 999): something went wrong");
   });
+
+  it("maps code 255 with SensitiveContentAnalysisML to ServiceCrashedError", () => {
+    const detail =
+      "Error FoundationModels.LanguageModelSession.GenerationError:-1 - UserInfo: " +
+      '["NSMultipleUnderlyingErrorsKey": [Error Domain=com.apple.SensitiveContentAnalysisML Code=15]]';
+    const err = statusToError(255, detail);
+    expect(err).toBeInstanceOf(ServiceCrashedError);
+    expect(err.message).toContain("safety service has crashed");
+    expect(err.message).toContain("launchctl kickstart");
+    expect(err.message).toContain(detail);
+  });
+
+  it("maps code 255 with ModelManagerError to ServiceCrashedError", () => {
+    const detail = "ModelManagerServices.ModelManagerError Code=1013";
+    const err = statusToError(255, detail);
+    expect(err).toBeInstanceOf(ServiceCrashedError);
+  });
+
+  it("maps code 255 without crash signature to generic GenerationError", () => {
+    const err = statusToError(255, "some other error");
+    expect(err).not.toBeInstanceOf(ServiceCrashedError);
+    expect(err).toBeInstanceOf(GenerationError);
+  });
 });
 
 describe("error hierarchy", () => {
@@ -135,6 +159,7 @@ describe("error hierarchy", () => {
     expect(new ConcurrentRequestsError()).toBeInstanceOf(GenerationError);
     expect(new RefusalError()).toBeInstanceOf(GenerationError);
     expect(new InvalidGenerationSchemaError()).toBeInstanceOf(GenerationError);
+    expect(new ServiceCrashedError()).toBeInstanceOf(GenerationError);
   });
 
   it("InvalidGenerationSchemaError extends GenerationError and FoundationModelsError", () => {
@@ -171,6 +196,19 @@ describe("error hierarchy", () => {
     expect(new RefusalError().name).toBe("RefusalError");
     expect(new InvalidGenerationSchemaError().name).toBe("InvalidGenerationSchemaError");
     expect(new ToolCallError("t", new Error("x")).name).toBe("ToolCallError");
+    expect(new ServiceCrashedError().name).toBe("ServiceCrashedError");
+  });
+
+  it("ServiceCrashedError includes recovery instructions", () => {
+    const err = new ServiceCrashedError();
+    expect(err.message).toContain("launchctl kickstart");
+    expect(err.message).toContain("com.apple.generativeexperiencesd");
+  });
+
+  it("ServiceCrashedError includes original error detail when provided", () => {
+    const err = new ServiceCrashedError("SensitiveContentAnalysisML Code=15");
+    expect(err.message).toContain("SensitiveContentAnalysisML Code=15");
+    expect(err.message).toContain("launchctl kickstart");
   });
 
   it("errors have default messages when constructed without arguments", () => {

@@ -178,6 +178,64 @@ describe("LanguageModelSession", () => {
     });
   });
 
+  describe("process exit cleanup", () => {
+    it("disposes live sessions on process exit", () => {
+      // Dispose any sessions left over from prior tests to isolate this test
+      process.emit("exit", 0);
+
+      const s1 = new LanguageModelSession();
+      const s2 = new LanguageModelSession();
+      expect(s1._nativeSession).not.toBeNull();
+      expect(s2._nativeSession).not.toBeNull();
+
+      // Simulate process exit — triggers the cleanup handler
+      process.emit("exit", 0);
+
+      expect(s1._nativeSession).toBeNull();
+      expect(s2._nativeSession).toBeNull();
+    });
+
+    it("does not fail if sessions are already disposed before exit", () => {
+      process.emit("exit", 0); // clear any leftovers
+
+      const session = new LanguageModelSession();
+      session.dispose();
+      vi.clearAllMocks();
+
+      // Should not throw or double-release
+      process.emit("exit", 0);
+      expect(mockFns.FMRelease).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("signal handlers", () => {
+    it("cleans up sessions and re-raises on SIGINT", () => {
+      process.emit("exit", 0); // clear leftovers
+
+      const session = new LanguageModelSession();
+      expect(session._nativeSession).not.toBeNull();
+
+      // Capture the SIGINT listener that _installExitHandler registered
+      const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true);
+
+      // Emit SIGINT to trigger the handler
+      process.emit("SIGINT", "SIGINT");
+
+      expect(session._nativeSession).toBeNull();
+      expect(killSpy).toHaveBeenCalledWith(process.pid, "SIGINT");
+      killSpy.mockRestore();
+    });
+  });
+
+  describe("Symbol.dispose", () => {
+    it("delegates to dispose()", () => {
+      const session = new LanguageModelSession();
+      session[Symbol.dispose]();
+      expect(session._nativeSession).toBeNull();
+      expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-session-pointer");
+    });
+  });
+
   describe("cancel", () => {
     it("does nothing when no active task and pointer is null", () => {
       const session = new LanguageModelSession();

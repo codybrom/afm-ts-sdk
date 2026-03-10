@@ -113,4 +113,8 @@ export class SystemLanguageModel {
       this._nativeModel = null;
     }
   }
+
+  [Symbol.dispose](): void {
+    this.dispose();
+  }
 }

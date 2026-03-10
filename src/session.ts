@@ -22,6 +22,35 @@ const _sessionRegistry = new FinalizationRegistry((pointer: NativePointer) => {
   } catch {}
 });
 
+// Track live sessions so we can release them when the process exits.
+// Orphaned native sessions can crash the Apple Intelligence safety service.
+const _liveSessions = new Set<LanguageModelSession>();
+
+function _cleanupAllSessions(): void {
+  for (const session of _liveSessions) {
+    try {
+      session.dispose();
+    } catch {}
+  }
+  _liveSessions.clear();
+}
+
+let _exitHandlerInstalled = false;
+function _installExitHandler(): void {
+  if (_exitHandlerInstalled) return;
+  _exitHandlerInstalled = true;
+  process.on("exit", _cleanupAllSessions);
+  // SIGINT (Ctrl+C) and SIGTERM (kill) don't trigger "exit" by default.
+  // Clean up native sessions, then re-raise the signal so the process
+  // terminates with the correct exit code / signal disposition.
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+      _cleanupAllSessions();
+      process.kill(process.pid, signal);
+    });
+  }
+}
+
 type ResponseCbArgs = [status: number, content: string, _length: number, userInfo: unknown];
 type StructuredCbArgs = [status: number, contentRef: NativePointer, userInfo: unknown];
 
@@ -59,6 +88,8 @@ export class LanguageModelSession {
       throw new FoundationModelsError("Failed to create LanguageModelSession");
     this.transcript = new Transcript(this._nativeSession);
     _sessionRegistry.register(this, this._nativeSession, this);
+    _liveSessions.add(this);
+    _installExitHandler();
   }
 
   /**
@@ -101,6 +132,8 @@ export class LanguageModelSession {
     // from the new session rather than the original deserialized transcript.
     transcript._updateNativeSession(pointer);
     _sessionRegistry.register(session, pointer, session);
+    _liveSessions.add(session);
+    _installExitHandler();
     return session;
   }
 
@@ -279,11 +312,16 @@ export class LanguageModelSession {
   }
 
   dispose(): void {
+    _liveSessions.delete(this);
     if (this._nativeSession) {
       _sessionRegistry.unregister(this);
       getFunctions().FMRelease(this._nativeSession);
       this._nativeSession = null;
     }
+  }
+
+  [Symbol.dispose](): void {
+    this.dispose();
   }
 
   // -------------------------------------------------------------------------

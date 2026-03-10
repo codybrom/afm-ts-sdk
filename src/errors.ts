@@ -97,6 +97,16 @@ export class InvalidGenerationSchemaError extends GenerationError {
   }
 }
 
+export class ServiceCrashedError extends GenerationError {
+  constructor(detail?: string) {
+    const recovery =
+      "The Apple Intelligence safety service has crashed. " +
+      "Restart it by running: launchctl kickstart -k gui/$(id -u)/com.apple.generativeexperiencesd";
+    super(detail ? `${recovery}\n\nOriginal error: ${detail}` : recovery);
+    this.name = "ServiceCrashedError";
+  }
+}
+
 export class ToolCallError extends FoundationModelsError {
   constructor(
     public readonly toolName: string,
@@ -131,6 +141,13 @@ export function statusToError(status: number, detail?: string | null): Generatio
     case GenerationErrorCode.INVALID_SCHEMA:
       return new InvalidGenerationSchemaError(`Invalid schema${suffix}`);
     default:
+      if (
+        status === GenerationErrorCode.UNKNOWN_ERROR &&
+        detail &&
+        (detail.includes("SensitiveContentAnalysisML") || detail.includes("ModelManagerError"))
+      ) {
+        return new ServiceCrashedError(detail);
+      }
       return new GenerationError(`Unknown error (code ${status})${suffix}`);
   }
 }

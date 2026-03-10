@@ -128,4 +128,8 @@ export abstract class Tool {
       this._nativeTool = null;
     }
   }
+
+  [Symbol.dispose](): void {
+    this.dispose();
+  }
 }

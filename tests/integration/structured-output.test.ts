@@ -7,7 +7,7 @@ import {
 } from "../../src/index.js";
 
 const model = new SystemLanguageModel();
-const { available } = model.isAvailable();
+const { available } = await model.waitUntilAvailable(5_000);
 const describeIfAvailable = available ? describe : describe.skip;
 
 afterAll(() => model.dispose());

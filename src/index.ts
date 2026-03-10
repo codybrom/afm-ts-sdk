@@ -37,5 +37,6 @@ export {
   ConcurrentRequestsError,
   RefusalError,
   InvalidGenerationSchemaError,
+  ServiceCrashedError,
   ToolCallError,
 } from "./errors.js";

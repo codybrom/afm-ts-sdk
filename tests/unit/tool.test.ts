@@ -248,6 +248,18 @@ describe("Tool", () => {
     });
   });
 
+  describe("Symbol.dispose", () => {
+    it("delegates to dispose()", () => {
+      const tool = new TestTool();
+      tool._register();
+      vi.clearAllMocks();
+      tool[Symbol.dispose]();
+      expect(mockKoffi.unregister).toHaveBeenCalledWith("mock-cb-pointer");
+      expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-tool-pointer");
+      expect(tool._nativeTool).toBeNull();
+    });
+  });
+
   describe("FinalizationRegistry cleanup", () => {
     it("unregisters callback and releases pointer when GC fires", () => {
       const cleanup = capturedRegistryCallback();

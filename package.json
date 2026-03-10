@@ -26,8 +26,9 @@
     "format:check": "prettier --check src/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run --config tests/integration/vitest.config.ts"
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:coverage": "vitest run --project unit --coverage"
   },
   "files": [
     "dist/",
