@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - LICENSE.md
+      - NOTICE
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - LICENSE.md
+      - NOTICE
+
+jobs:
+  test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npx vitest run tests/unit --coverage
+
+  build-dylib:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build native dylib from source
+        run: |
+          rm -f native/libFoundationModels.dylib
+          bash scripts/build-native.sh
+      - name: Verify dylib
+        run: |
+          file native/libFoundationModels.dylib
+          otool -L native/libFoundationModels.dylib

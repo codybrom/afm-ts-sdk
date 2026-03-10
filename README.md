@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/tsfm-sdk"><img src="https://img.shields.io/npm/v/tsfm-sdk" alt="npm"></a>
-  <a href="https://github.com/codybrom/tsfm/actions/workflows/test.yml"><img src="https://github.com/codybrom/tsfm/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/codybrom/tsfm/actions/workflows/ci.yml"><img src="https://github.com/codybrom/tsfm/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/npm/l/tsfm-sdk" alt="license"></a>
 </p>
 
