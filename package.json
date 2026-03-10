@@ -1,6 +1,6 @@
 {
   "name": "tsfm-sdk",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Unofficial TypeScript bindings for Apple's Foundation Models framework (Apple Intelligence on-device LLM)",
   "license": "Apache-2.0",
   "type": "module",
@@ -29,7 +29,8 @@
     "dist/",
     "native/libFoundationModels.dylib",
     "native/FoundationModels.h",
-    "src/"
+    "src/",
+    "NOTICE"
   ],
   "dependencies": {
     "koffi": "^2.15.1"
