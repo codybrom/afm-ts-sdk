@@ -6,7 +6,7 @@
 
 <p align="center">
   TypeScript SDK for Apple's <a href="https://developer.apple.com/documentation/foundationmodels">Foundation Models</a> framework.<br>
-  On-device Apple Intelligence in Node.js — no API keys, no servers.
+  On-device Apple Intelligence in Node.js — No keys. No servers. <i>It just works.</i>
 </p>
 
 <p align="center">
@@ -61,11 +61,11 @@ model.dispose();
 
 ## Requirements
 
-- macOS 26 (Tahoe) or later, Apple Silicon
+- Mac running macOS 26 (Tahoe) or later on Apple Silicon
 - Apple Intelligence enabled in System Settings
 - Node.js 20+
 
-Xcode is **not** required — a prebuilt dylib is bundled with the npm package.
+Xcode **not** required (prebuilt dylib is bundled with the npm package)
 
 ## Development
 
@@ -82,5 +82,5 @@ Issues and PRs welcome. If something doesn't work on your machine or you find a 
 
 ## License
 
-Apache 2.0 - See [LICENSE.md](LICENSE.md)
+Apache 2.0 - See [LICENSE.md](LICENSE.md)  
 The npm package bundles Apple's Foundation Models C bindings and prebuilt dylib (also Apache 2.0 - see [NOTICE](NOTICE))
