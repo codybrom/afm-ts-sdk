@@ -2,11 +2,30 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    globals: true,
-    include: ["tests/unit/**/*.test.ts"],
     coverage: {
       include: ["src/**"],
-      exclude: ["src/index.ts", "src/bindings.ts"],
+      exclude: ["src/index.ts", "src/bindings.ts", "src/compat/types.ts"],
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          globals: true,
+          include: ["tests/unit/**/*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          globals: true,
+          include: ["tests/integration/**/*.test.ts"],
+          pool: "forks",
+          fileParallelism: false,
+          testTimeout: 30_000,
+        },
+      },
+    ],
   },
 });

@@ -38,5 +38,5 @@ describeIfAvailable("tools (integration)", () => {
     expect(reply).toContain("10");
     session.dispose();
     tool.dispose();
-  }, 120_000);
+  });
 });

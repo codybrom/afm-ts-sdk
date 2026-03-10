@@ -1,0 +1,353 @@
+import { randomUUID } from "node:crypto";
+import { SystemLanguageModel } from "../core.js";
+import { LanguageModelSession } from "../session.js";
+import { Transcript } from "../transcript.js";
+import type { GenerationOptions } from "../options.js";
+import {
+  ExceededContextWindowSizeError,
+  RefusalError,
+  RateLimitedError,
+  GuardrailViolationError,
+} from "../errors.js";
+import { messagesToTranscript } from "./transcript.js";
+import { mapParams } from "./params.js";
+import { buildToolInstructions, buildToolSchema, parseToolResponse } from "./tools.js";
+import { Stream } from "./stream.js";
+import type {
+  ChatCompletionCreateParams,
+  ChatCompletion,
+  ChatCompletionChunk,
+  ChatCompletionTool,
+} from "./types.js";
+
+export { Stream } from "./stream.js";
+export * from "./types.js";
+
+export const MODEL_APPLE_INTELLIGENCE = "apple-intelligence";
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+interface TranscriptJson {
+  type: string;
+  version: number;
+  transcript: {
+    entries: Array<{
+      role: string;
+      id: string;
+      contents: Array<{ type: string; text: string; id: string }>;
+      options?: Record<string, unknown>;
+    }>;
+  };
+}
+
+function makeId(): string {
+  return "chatcmpl-" + randomUUID();
+}
+
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+// ---------------------------------------------------------------------------
+// Error wrapping
+// ---------------------------------------------------------------------------
+
+class CompatError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "CompatError";
+    this.status = status;
+    if (code) this.code = code;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Nested helper classes
+// ---------------------------------------------------------------------------
+
+class Completions {
+  private _getModel: () => SystemLanguageModel;
+
+  constructor(getModel: () => SystemLanguageModel) {
+    this._getModel = getModel;
+  }
+
+  async create(params: ChatCompletionCreateParams & { stream: true }): Promise<Stream>;
+  async create(
+    params: ChatCompletionCreateParams & { stream?: false | null },
+  ): Promise<ChatCompletion>;
+  async create(params: ChatCompletionCreateParams): Promise<ChatCompletion | Stream>;
+  async create(params: ChatCompletionCreateParams): Promise<ChatCompletion | Stream> {
+    const options = mapParams(params);
+    const { transcriptJson, prompt: rawPrompt } = messagesToTranscript(params.messages);
+    const tools = params.tools;
+    let prompt = rawPrompt;
+    let transcriptStr = transcriptJson;
+
+    // Inject tool instructions into the transcript's instructions entry
+    if (tools && tools.length > 0) {
+      const toolInstructions = buildToolInstructions(tools);
+      const parsed = JSON.parse(transcriptStr) as TranscriptJson;
+      const instructionsEntry = parsed.transcript.entries.find((e) => e.role === "instructions");
+      if (instructionsEntry) {
+        instructionsEntry.contents[0].text += toolInstructions;
+      } else {
+        parsed.transcript.entries.unshift({
+          role: "instructions",
+          id: randomUUID(),
+          contents: [{ type: "text", text: toolInstructions.trimStart(), id: randomUUID() }],
+        });
+      }
+      transcriptStr = JSON.stringify(parsed);
+    }
+
+    // Append JSON instruction to prompt for json_object mode
+    if (params.response_format?.type === "json_object") {
+      prompt += "\n\nRespond with valid JSON only. No other text.";
+    }
+
+    // Create session from transcript
+    const transcript = Transcript.fromJson(transcriptStr);
+    const model = this._getModel();
+    const session = LanguageModelSession.fromTranscript(transcript, { model });
+
+    if (params.stream) {
+      return this._createStream(session, prompt, options, tools);
+    }
+
+    return this._createCompletion(session, prompt, options, params, tools);
+  }
+
+  private async _createCompletion(
+    session: LanguageModelSession,
+    prompt: string,
+    options: GenerationOptions,
+    params: ChatCompletionCreateParams,
+    tools?: ChatCompletionTool[],
+  ): Promise<ChatCompletion> {
+    try {
+      // Tools present → use structured output with tool schema
+      if (tools && tools.length > 0) {
+        const schema = buildToolSchema(tools);
+        const content = await session.respondWithJsonSchema(prompt, schema, { options });
+        const parsed = JSON.parse(content.toJson()) as Record<string, unknown>;
+        const result = parseToolResponse(parsed);
+
+        if (result.type === "tool_call" && result.toolCall) {
+          return buildCompletion(null, "tool_calls", [result.toolCall]);
+        }
+        return buildCompletion(result.content as string, "stop");
+      }
+
+      // json_schema response format
+      if (params.response_format?.type === "json_schema") {
+        const rf = params.response_format as {
+          type: "json_schema";
+          json_schema: { schema?: Record<string, unknown> };
+        };
+        const schema = rf.json_schema.schema ?? { type: "object" };
+        const content = await session.respondWithJsonSchema(prompt, schema, { options });
+        return buildCompletion(content.toJson(), "stop");
+      }
+
+      // Plain text
+      const text = await session.respond(prompt, { options });
+      return buildCompletion(text, "stop");
+    } catch (err) {
+      if (err instanceof ExceededContextWindowSizeError) {
+        return buildCompletion("", "length");
+      }
+      if (err instanceof RefusalError) {
+        return {
+          ...buildCompletion(null, "stop"),
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant" as const,
+                content: null,
+                refusal: (err as Error).message,
+              },
+              finish_reason: "stop" as const,
+            },
+          ],
+        };
+      }
+      if (err instanceof RateLimitedError) {
+        throw new CompatError((err as Error).message, 429);
+      }
+      if (err instanceof GuardrailViolationError) {
+        throw new CompatError((err as Error).message, 400, "content_filter");
+      }
+      throw err;
+    } finally {
+      session.dispose();
+    }
+  }
+
+  private _createStream(
+    session: LanguageModelSession,
+    prompt: string,
+    options: GenerationOptions,
+    tools?: ChatCompletionTool[],
+  ): Stream {
+    const id = makeId();
+    const created = nowSeconds();
+
+    async function* generate(): AsyncGenerator<ChatCompletionChunk> {
+      try {
+        // First chunk: role announcement
+        yield makeChunk(id, created, { role: "assistant", content: "" }, null);
+
+        // Tools or structured output with streaming: buffer the full response
+        if (tools && tools.length > 0) {
+          const schema = buildToolSchema(tools);
+          const content = await session.respondWithJsonSchema(prompt, schema, { options });
+          const parsed = JSON.parse(content.toJson()) as Record<string, unknown>;
+          const result = parseToolResponse(parsed);
+
+          if (result.type === "tool_call" && result.toolCall) {
+            yield makeChunk(
+              id,
+              created,
+              {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: result.toolCall.id,
+                    type: "function",
+                    function: {
+                      name: result.toolCall.function.name,
+                      arguments: result.toolCall.function.arguments,
+                    },
+                  },
+                ],
+              },
+              null,
+            );
+            yield makeChunk(id, created, {}, "tool_calls");
+          } else {
+            yield makeChunk(id, created, { content: result.content as string }, null);
+            yield makeChunk(id, created, {}, "stop");
+          }
+          return;
+        }
+
+        // Plain text streaming
+        for await (const delta of session.streamResponse(prompt, { options })) {
+          yield makeChunk(id, created, { content: delta }, null);
+        }
+
+        // Final chunk
+        yield makeChunk(id, created, {}, "stop");
+      } catch (err) {
+        // Map errors to finish_reason chunks
+        if (err instanceof ExceededContextWindowSizeError) {
+          yield makeChunk(id, created, {}, "length");
+          return;
+        }
+        if (err instanceof RefusalError) {
+          yield makeChunk(id, created, { refusal: (err as Error).message }, null);
+          yield makeChunk(id, created, {}, "stop");
+          return;
+        }
+        if (err instanceof RateLimitedError) {
+          throw new CompatError((err as Error).message, 429);
+        }
+        if (err instanceof GuardrailViolationError) {
+          throw new CompatError((err as Error).message, 400, "content_filter");
+        }
+        throw err;
+      } finally {
+        session.dispose();
+      }
+    }
+
+    return new Stream(generate());
+  }
+}
+
+class Chat {
+  completions: Completions;
+
+  constructor(getModel: () => SystemLanguageModel) {
+    this.completions = new Completions(getModel);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main OpenAI class
+// ---------------------------------------------------------------------------
+
+export default class OpenAI {
+  chat: Chat;
+  private _model: SystemLanguageModel;
+
+  constructor() {
+    this._model = new SystemLanguageModel();
+    this.chat = new Chat(() => this._model);
+  }
+
+  close(): void {
+    this._model.dispose();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Response builders
+// ---------------------------------------------------------------------------
+
+function buildCompletion(
+  content: string | null,
+  finishReason: "stop" | "length" | "tool_calls",
+  toolCalls?: ChatCompletion["choices"][0]["message"]["tool_calls"],
+): ChatCompletion {
+  return {
+    id: makeId(),
+    object: "chat.completion",
+    created: nowSeconds(),
+    model: MODEL_APPLE_INTELLIGENCE,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content,
+          refusal: null,
+          ...(toolCalls ? { tool_calls: toolCalls } : {}),
+        },
+        finish_reason: finishReason,
+      },
+    ],
+    usage: null,
+    system_fingerprint: null,
+  };
+}
+
+function makeChunk(
+  id: string,
+  created: number,
+  delta: ChatCompletionChunk["choices"][0]["delta"],
+  finishReason: ChatCompletionChunk["choices"][0]["finish_reason"],
+): ChatCompletionChunk {
+  return {
+    id,
+    object: "chat.completion.chunk",
+    created,
+    model: MODEL_APPLE_INTELLIGENCE,
+    choices: [
+      {
+        index: 0,
+        delta,
+        finish_reason: finishReason,
+      },
+    ],
+    usage: null,
+    system_fingerprint: null,
+  };
+}

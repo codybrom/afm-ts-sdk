@@ -1,0 +1,98 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mapParams } from "../../../src/compat/params.js";
+import { SamplingMode } from "../../../src/options.js";
+
+describe("mapParams", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns empty options when no params provided", () => {
+    const result = mapParams({});
+    expect(result).toEqual({});
+  });
+
+  it("maps temperature to GenerationOptions.temperature", () => {
+    const result = mapParams({ temperature: 0.7 });
+    expect(result.temperature).toBe(0.7);
+  });
+
+  it("maps max_tokens to maximumResponseTokens", () => {
+    const result = mapParams({ max_tokens: 512 });
+    expect(result.maximumResponseTokens).toBe(512);
+  });
+
+  it("maps max_completion_tokens to maximumResponseTokens", () => {
+    const result = mapParams({ max_completion_tokens: 256 });
+    expect(result.maximumResponseTokens).toBe(256);
+  });
+
+  it("prefers max_completion_tokens over max_tokens when both present", () => {
+    const result = mapParams({ max_tokens: 512, max_completion_tokens: 256 });
+    expect(result.maximumResponseTokens).toBe(256);
+  });
+
+  it("maps top_p to SamplingMode.random with probabilityThreshold", () => {
+    const result = mapParams({ top_p: 0.9 });
+    expect(result.sampling).toEqual(SamplingMode.random({ probabilityThreshold: 0.9 }));
+  });
+
+  it("maps seed to SamplingMode.random with seed", () => {
+    const result = mapParams({ seed: 42 });
+    expect(result.sampling).toEqual(SamplingMode.random({ seed: 42 }));
+  });
+
+  it("combines top_p and seed into a single SamplingMode.random", () => {
+    const result = mapParams({ top_p: 0.8, seed: 7 });
+    expect(result.sampling).toEqual(SamplingMode.random({ probabilityThreshold: 0.8, seed: 7 }));
+  });
+
+  it("sets temperature independently from sampling mode", () => {
+    const result = mapParams({ temperature: 0.5, top_p: 0.9 });
+    expect(result.temperature).toBe(0.5);
+    expect(result.sampling).toEqual(SamplingMode.random({ probabilityThreshold: 0.9 }));
+  });
+
+  it("warns for each unsupported param that is non-null", () => {
+    mapParams({ n: 2, stop: "STOP", logprobs: true });
+    expect(console.warn).toHaveBeenCalledTimes(3);
+  });
+
+  it("warns when model is not apple-intelligence", () => {
+    mapParams({ model: "gpt-4o" });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("gpt-4o"),
+    );
+  });
+
+  it("does not warn when model is apple-intelligence", () => {
+    mapParams({ model: "apple-intelligence" });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when model is omitted", () => {
+    mapParams({});
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("treats null values as not provided", () => {
+    const result = mapParams({
+      temperature: null,
+      max_tokens: null,
+      max_completion_tokens: null,
+      top_p: null,
+      seed: null,
+    });
+    expect(result).toEqual({});
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not warn for null unsupported params", () => {
+    mapParams({ n: null, stop: null });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+});
