@@ -49,15 +49,15 @@ model.dispose();
 
 ## Documentation
 
-**[Read the full docs →](https://codybrom.github.io/tsfm/)**
+**[Read the full docs →](https://tsfm.dev/)**
 
-- [Getting Started](https://codybrom.github.io/tsfm/guide/getting-started) — installation, requirements, first steps
-- [Sessions](https://codybrom.github.io/tsfm/guide/sessions) — text generation, concurrency, cancellation
-- [Streaming](https://codybrom.github.io/tsfm/guide/streaming) — token-by-token response streaming
-- [Structured Output](https://codybrom.github.io/tsfm/guide/structured-output) — typed schemas with generation guides
-- [Tools](https://codybrom.github.io/tsfm/guide/tools) — function calling
-- [API Reference](https://codybrom.github.io/tsfm/api/) — complete API docs
-- [Examples](https://codybrom.github.io/tsfm/examples/) — runnable code for every feature
+- [Getting Started](https://tsfm.dev/guide/getting-started) — installation, requirements, first steps
+- [Sessions](https://tsfm.dev/guide/sessions) — text generation, concurrency, cancellation
+- [Streaming](https://tsfm.dev/guide/streaming) — token-by-token response streaming
+- [Structured Output](https://tsfm.dev/guide/structured-output) — typed schemas with generation guides
+- [Tools](https://tsfm.dev/guide/tools) — function calling
+- [API Reference](https://tsfm.dev/api/) — complete API docs
+- [Examples](https://tsfm.dev/examples/) — runnable code for every feature
 
 ## Requirements
 

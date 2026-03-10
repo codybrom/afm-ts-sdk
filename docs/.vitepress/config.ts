@@ -5,11 +5,11 @@ export default defineConfig({
   description:
     "TypeScript SDK for Apple's Foundation Models framework — on-device Apple Intelligence in Node.js",
 
-  base: "/tsfm/",
+  base: "/",
   cleanUrls: true,
 
   head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: "/tsfm/logo.svg" }],
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
     ["meta", { name: "theme-color", content: "#0071e3" }],
     [
       "meta",
