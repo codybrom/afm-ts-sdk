@@ -295,17 +295,13 @@ describe("OpenAI compat layer", () => {
       client.close();
     });
 
-    it("re-throws GuardrailViolationError with status 400 and code content_filter", async () => {
+    it("returns finish_reason content_filter for GuardrailViolationError", async () => {
       simulateRespondError(3, "Guardrail violation");
 
       const client = new OpenAI();
-      try {
-        await client.chat.completions.create({ messages: basicMessages });
-        expect.unreachable("Should have thrown");
-      } catch (err) {
-        expect((err as { status: number }).status).toBe(400);
-        expect((err as { code: string }).code).toBe("content_filter");
-      }
+      const result = await client.chat.completions.create({ messages: basicMessages });
+      expect(result.choices[0].finish_reason).toBe("content_filter");
+      expect(result.choices[0].message.content).toBeNull();
       client.close();
     });
 
@@ -810,7 +806,7 @@ describe("OpenAI compat layer", () => {
       client.close();
     });
 
-    it("throws CompatError with status 400 for GuardrailViolationError", async () => {
+    it("yields finish_reason content_filter for GuardrailViolationError during streaming", async () => {
       simulateStreamError(3, "Guardrail violation");
 
       const client = new OpenAI();
@@ -819,15 +815,12 @@ describe("OpenAI compat layer", () => {
         stream: true,
       });
 
-      try {
-        for await (const chunk of stream) {
-          expect(chunk).toBeDefined();
-        }
-        expect.unreachable("Should have thrown");
-      } catch (err) {
-        expect((err as { status: number }).status).toBe(400);
-        expect((err as { code: string }).code).toBe("content_filter");
+      const chunks = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
       }
+      const last = chunks[chunks.length - 1];
+      expect(last.choices[0].finish_reason).toBe("content_filter");
       client.close();
     });
 

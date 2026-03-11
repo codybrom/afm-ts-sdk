@@ -20,6 +20,13 @@ const UNSUPPORTED_PARAMS: ReadonlyArray<keyof ChatCompletionCreateParams> = [
   "modalities",
   "user",
   "stream_options",
+  "verbosity",
+  "web_search_options",
+  "prompt_cache_key",
+  "prompt_cache_retention",
+  "safety_identifier",
+  "function_call",
+  "functions",
 ];
 
 /**

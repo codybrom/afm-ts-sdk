@@ -47,13 +47,16 @@ function extractText(
 ): string {
   if (content == null) return "";
   if (typeof content === "string") return content;
+  const unsupported = new Set<string>();
   for (const part of content) {
-    if (part.type === "image_url") {
-      console.warn(
-        "[tsfm compat] image_url content parts are not supported by Apple Intelligence and will be ignored.",
-      );
-      break;
+    if (part.type !== "text") {
+      unsupported.add(part.type);
     }
+  }
+  for (const type of unsupported) {
+    console.warn(
+      `[tsfm compat] ${type} content parts are not supported by Apple Intelligence and will be ignored.`,
+    );
   }
   return content
     .filter((part) => part.type === "text" && part.text != null)

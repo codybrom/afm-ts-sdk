@@ -94,13 +94,11 @@ function nowSeconds(): number {
 
 class CompatError extends Error {
   status: number;
-  code?: string;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number) {
     super(message);
     this.name = "CompatError";
     this.status = status;
-    if (code) this.code = code;
   }
 }
 
@@ -231,7 +229,7 @@ class Completions {
         throw new CompatError((err as Error).message, 429);
       }
       if (err instanceof GuardrailViolationError) {
-        throw new CompatError((err as Error).message, 400, "content_filter");
+        return buildCompletion(null, "content_filter");
       }
       throw err;
     } finally {
@@ -309,7 +307,8 @@ class Completions {
           throw new CompatError((err as Error).message, 429);
         }
         if (err instanceof GuardrailViolationError) {
-          throw new CompatError((err as Error).message, 400, "content_filter");
+          yield makeChunk(id, created, {}, "content_filter");
+          return;
         }
         throw err;
       } finally {
@@ -353,7 +352,7 @@ export default class OpenAI {
 
 function buildCompletion(
   content: string | null,
-  finishReason: "stop" | "length" | "tool_calls",
+  finishReason: "stop" | "length" | "tool_calls" | "content_filter",
   toolCalls?: ChatCompletion["choices"][0]["message"]["tool_calls"],
 ): ChatCompletion {
   return {

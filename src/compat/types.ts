@@ -19,7 +19,10 @@ export type ChatCompletionDeveloperMessageParam = {
 
 export type ChatCompletionContentPart =
   | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string; detail?: string } };
+  | { type: "image_url"; image_url: { url: string; detail?: string } }
+  | { type: "input_audio"; input_audio: { data: string; format: string } }
+  | { type: "file"; file: { file_data?: string; file_id?: string; filename?: string } }
+  | { type: "refusal"; refusal: string };
 
 export type ChatCompletionUserMessageParam = {
   role: "user";
@@ -38,7 +41,7 @@ export type ChatCompletionMessageToolCall = {
 
 export type ChatCompletionAssistantMessageParam = {
   role: "assistant";
-  content?: string | null;
+  content?: string | Array<ChatCompletionContentPart> | null;
   tool_calls?: ChatCompletionMessageToolCall[];
   refusal?: string | null;
   name?: string;
@@ -46,7 +49,7 @@ export type ChatCompletionAssistantMessageParam = {
 
 export type ChatCompletionToolMessageParam = {
   role: "tool";
-  content: string;
+  content: string | Array<{ type: "text"; text: string }>;
   tool_call_id: string;
 };
 
@@ -126,6 +129,13 @@ export type ChatCompletionCreateParams = {
   modalities?: string[] | null;
   user?: string;
   stream_options?: { include_usage?: boolean } | null;
+  verbosity?: string | null;
+  web_search_options?: unknown;
+  prompt_cache_key?: string;
+  prompt_cache_retention?: string | null;
+  safety_identifier?: string;
+  function_call?: unknown;
+  functions?: unknown[];
 };
 
 // ---------------------------------------------------------------------------
@@ -142,7 +152,7 @@ export type ChatCompletionMessage = {
 export type ChatCompletionChoice = {
   index: number;
   message: ChatCompletionMessage;
-  finish_reason: "stop" | "length" | "tool_calls";
+  finish_reason: "stop" | "length" | "tool_calls" | "content_filter";
 };
 
 export type ChatCompletion = {
@@ -177,7 +187,7 @@ export type ChatCompletionChunkDelta = {
 export type ChatCompletionChunkChoice = {
   index: number;
   delta: ChatCompletionChunkDelta;
-  finish_reason: "stop" | "length" | "tool_calls" | null;
+  finish_reason: "stop" | "length" | "tool_calls" | "content_filter" | null;
 };
 
 export type ChatCompletionChunk = {
