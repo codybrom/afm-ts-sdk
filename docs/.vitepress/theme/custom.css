@@ -132,7 +132,10 @@ body {
 
 /* Hero 3D scene — icon box with spinning lattice */
 .hero-scene {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 1;
   width: 192px;
   height: 192px;
