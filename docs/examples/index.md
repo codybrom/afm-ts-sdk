@@ -2,14 +2,6 @@
 
 Runnable examples demonstrating each feature of the SDK. All examples are in the [`examples/`](https://github.com/codybrom/tsfm/tree/main/examples) directory.
 
-## Running Examples
-
-```bash
-npx tsx examples/basic/basic.ts
-```
-
-Requires macOS 26+ with Apple Intelligence enabled.
-
 ## Available Examples
 
 | Example | Description |

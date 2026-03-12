@@ -1,6 +1,31 @@
 # Chat & Responses APIs
 
-TSFM ships Chat-style and Responses-style API interfaces at `tsfm-sdk/chat`. It supports both `responses.create()` and `chat.completions.create()` so you can swap in on-device Apple Intelligence with minimal code changes.
+## SDK Options
+
+TSFM offers two ways to interact with the on-device Foundation Model:
+
+1. The **Native SDK** covered in the rest of this guide<br>
+   <small>(mostly mirrors [the original Swift FoundationModels API](https://developer.apple.com/documentation/foundationmodels))</small>
+2. **Compatibility APIs** that mirror popular cloud interfaces
+
+The `tsfm-sdk/chat` module translates familiar OpenAI-style calls into native Foundation Models operations, so you can swap in on-device Apple Intelligence with minimal code changes.
+
+For full control over sessions, schemas, and tools, use the [native SDK](/guide/sessions) instead.
+
+## Tradeoffs
+
+If you use `tsfm-sdk/chat` you will lose access to some features:
+
+- Each `create()` call builds and tears down a session (slightly higher overhead)
+- No direct access to [generation guides](/guide/structured-output#generation-guides) (e.g. `anyOf`, `regex`, `range` constraints)
+- No persistent sessions (you manage conversation history yourself and pass it each call)
+- No direct access to the underlying [transcript](/guide/transcripts) (though you can build your own from the messages array)
+
+## When to Use
+
+- Migrating an existing OpenAI-based codebase to on-device inference
+- Building apps that switch between cloud and on-device models
+- Prototyping quickly with a familiar interface
 
 ```ts
 import Client from "tsfm-sdk/chat";

@@ -1,4 +1,80 @@
 import { defineConfig } from "vitepress";
+import svgLoader from "vite-svg-loader";
+import { generateLlmsTxt, generateLlmTxt, generateLlmsFullTxt } from "./generate-llms";
+import type { Plugin } from "vite";
+
+function llmsTxtDevPlugin(): Plugin {
+  let srcDir: string;
+  return {
+    name: "llms-txt-dev",
+    configResolved(config) {
+      // VitePress sets root to the docs source directory
+      srcDir = config.root;
+    },
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url === "/llms.txt") {
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.end(generateLlmTxt());
+          return;
+        }
+        if (req.url === "/llms-full.txt") {
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.end(await generateLlmsFullTxt(srcDir));
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
+function guideSidebar() {
+  return [
+    {
+      text: "Introduction",
+      collapsed: false,
+      items: [
+        { text: "Getting Started", link: "/guide/getting-started" },
+        { text: "Model Configuration", link: "/guide/model-configuration" },
+        { text: "Chat & Responses APIs", link: "/guide/chat-api" },
+      ],
+    },
+    {
+      text: "Core Concepts",
+      collapsed: false,
+      items: [
+        { text: "Sessions", link: "/guide/sessions" },
+        { text: "Streaming", link: "/guide/streaming" },
+        { text: "Structured Output", link: "/guide/structured-output" },
+        { text: "Tools", link: "/guide/tools" },
+        { text: "Transcripts", link: "/guide/transcripts" },
+        { text: "Generation Options", link: "/guide/generation-options" },
+        { text: "Error Handling", link: "/guide/error-handling" },
+      ],
+    },
+    {
+      text: "Examples",
+      collapsed: true,
+      items: [
+        { text: "Overview", link: "/examples/" },
+        { text: "Basic", link: "/examples/basic" },
+        { text: "Streaming", link: "/examples/streaming" },
+        { text: "Structured Output", link: "/examples/structured-output" },
+        { text: "JSON Schema", link: "/examples/json-schema" },
+        { text: "Tools", link: "/examples/tools" },
+        { text: "Generation Options", link: "/examples/generation-options" },
+        { text: "Transcripts", link: "/examples/transcript" },
+        { text: "Content Tagging", link: "/examples/content-tagging" },
+        { text: "Chat & Responses APIs", link: "/examples/chat-api" },
+      ],
+    },
+    {
+      text: "API Reference",
+      link: "/api/",
+    },
+  ];
+}
 
 export default defineConfig({
   title: "tsfm",
@@ -7,6 +83,17 @@ export default defineConfig({
 
   base: "/",
   cleanUrls: true,
+  sitemap: {
+    hostname: "https://tsfm.dev",
+  },
+
+  vite: {
+    plugins: [svgLoader(), llmsTxtDevPlugin()],
+  },
+
+  async buildEnd(siteConfig) {
+    await generateLlmsTxt(siteConfig);
+  },
 
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
@@ -50,50 +137,17 @@ export default defineConfig({
 
     nav: [
       { text: "Guide", link: "/guide/getting-started" },
-      { text: "API", link: "/api/" },
-      { text: "Examples", link: "/examples/" },
+      { text: "Reference", link: "/api/" },
       { text: "Changelog", link: "/changelog" },
     ],
 
     sidebar: {
-      "/guide/": [
-        {
-          text: "Introduction",
-          items: [
-            { text: "Getting Started", link: "/guide/getting-started" },
-            { text: "Model Configuration", link: "/guide/model-configuration" },
-          ],
-        },
-        {
-          text: "Core Concepts",
-          items: [
-            { text: "Sessions", link: "/guide/sessions" },
-            { text: "Streaming", link: "/guide/streaming" },
-            { text: "Structured Output", link: "/guide/structured-output" },
-            { text: "Tools", link: "/guide/tools" },
-            { text: "Transcripts", link: "/guide/transcripts" },
-          ],
-        },
-        {
-          text: "Advanced",
-          items: [
-            { text: "Generation Options", link: "/guide/generation-options" },
-            { text: "Error Handling", link: "/guide/error-handling" },
-          ],
-        },
-        {
-          text: "Integrations",
-          items: [
-            {
-              text: "Chat & Responses APIs",
-              link: "/guide/chat-api",
-            },
-          ],
-        },
-      ],
+      "/guide/": guideSidebar(),
+      "/examples/": guideSidebar(),
       "/api/": [
         {
           text: "API Reference",
+          collapsed: false,
           items: [
             { text: "Overview", link: "/api/" },
             { text: "SystemLanguageModel", link: "/api/system-language-model" },
@@ -107,26 +161,6 @@ export default defineConfig({
           ],
         },
       ],
-      "/examples/": [
-        {
-          text: "Examples",
-          items: [
-            { text: "Overview", link: "/examples/" },
-            { text: "Basic", link: "/examples/basic" },
-            { text: "Streaming", link: "/examples/streaming" },
-            { text: "Structured Output", link: "/examples/structured-output" },
-            { text: "JSON Schema", link: "/examples/json-schema" },
-            { text: "Tools", link: "/examples/tools" },
-            { text: "Generation Options", link: "/examples/generation-options" },
-            { text: "Transcripts", link: "/examples/transcript" },
-            { text: "Content Tagging", link: "/examples/content-tagging" },
-            {
-              text: "Chat & Responses APIs",
-              link: "/examples/chat-api",
-            },
-          ],
-        },
-      ],
     },
 
     socialLinks: [
@@ -136,15 +170,6 @@ export default defineConfig({
 
     search: {
       provider: "local",
-    },
-
-    editLink: {
-      pattern: "https://github.com/codybrom/tsfm/edit/main/docs/:path",
-    },
-
-    footer: {
-      message: "Released under the Apache 2.0 License.",
-      copyright: "Not affiliated with Apple Inc.",
     },
   },
 });
