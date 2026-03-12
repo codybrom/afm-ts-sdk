@@ -17,7 +17,7 @@ const client = new OpenAI();
 // ---------------------------------------------------------------------------
 console.log("=== Basic text generation ===");
 const basic = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [
     { role: "system", content: "You are a helpful assistant. Be concise." },
     { role: "user", content: "What is the capital of France?" },
@@ -32,7 +32,7 @@ console.log();
 // ---------------------------------------------------------------------------
 console.log("=== Multi-turn conversation ===");
 const multi = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [
     { role: "system", content: "You are a math tutor. Be concise." },
     { role: "user", content: "What is 2 + 2?" },
@@ -48,7 +48,7 @@ console.log();
 // ---------------------------------------------------------------------------
 console.log("=== Streaming ===");
 const stream = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [{ role: "user", content: "Count from 1 to 5, one per line." }],
   stream: true,
 });
@@ -64,7 +64,7 @@ console.log("\n");
 // ---------------------------------------------------------------------------
 console.log("=== Structured output ===");
 const structured = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [{ role: "user", content: "Extract: Alice is 28 years old and lives in Seattle" }],
   response_format: {
     type: "json_schema",
@@ -108,7 +108,7 @@ const tools = [
 ];
 
 const toolCall = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [{ role: "user", content: "What's the weather in Tokyo?" }],
   tools,
 });
@@ -121,7 +121,7 @@ if (choice.finish_reason === "tool_calls" && choice.message.tool_calls) {
 
   // Simulate tool result and continue
   const followUp = await client.chat.completions.create({
-    model: "apple-intelligence",
+    model: "SystemLanguageModel",
     messages: [
       { role: "user", content: "What's the weather in Tokyo?" },
       { role: "assistant", content: null, tool_calls: [call] },
@@ -144,7 +144,7 @@ console.log();
 // ---------------------------------------------------------------------------
 console.log("=== Generation options ===");
 const opts = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [{ role: "user", content: "Say hello" }],
   temperature: 0,
   max_tokens: 20,

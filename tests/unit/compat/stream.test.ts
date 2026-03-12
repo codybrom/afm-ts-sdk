@@ -29,7 +29,7 @@ function makeChunk(
     id: "chatcmpl-test",
     object: "chat.completion.chunk",
     created: 1234567890,
-    model: "apple-intelligence",
+    model: "SystemLanguageModel",
     choices: [
       {
         index: 0,

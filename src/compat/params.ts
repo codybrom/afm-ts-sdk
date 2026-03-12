@@ -38,9 +38,9 @@ export function mapParams(params: ChatCompletionCreateParams): GenerationOptions
   const options: GenerationOptions = {};
 
   // Warn on non-standard model names
-  if (params.model !== undefined && params.model !== "apple-intelligence") {
+  if (params.model !== undefined && params.model !== "SystemLanguageModel") {
     console.warn(
-      `[tsfm compat] Model "${params.model}" is not supported. Use "apple-intelligence" or omit the model field.`,
+      `[tsfm compat] Model "${params.model}" is not supported. Use "SystemLanguageModel" or omit the model field.`,
     );
   }
 

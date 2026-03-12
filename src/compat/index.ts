@@ -33,7 +33,7 @@ export { Responses } from "./responses.js";
 export * from "./types.js";
 export * from "./responses-types.js";
 
-export const MODEL_APPLE_INTELLIGENCE = "apple-intelligence";
+export const MODEL_DEFAULT = "SystemLanguageModel";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -394,7 +394,7 @@ function buildCompletion(
     id: makeId(),
     object: "chat.completion",
     created: nowSeconds(),
-    model: MODEL_APPLE_INTELLIGENCE,
+    model: MODEL_DEFAULT,
     choices: [
       {
         index: 0,
@@ -422,7 +422,7 @@ function makeChunk(
     id,
     object: "chat.completion.chunk",
     created,
-    model: MODEL_APPLE_INTELLIGENCE,
+    model: MODEL_DEFAULT,
     choices: [
       {
         index: 0,

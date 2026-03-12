@@ -51,7 +51,7 @@ vi.mock("../../../src/tool.js", () => ({
   },
 }));
 
-import OpenAI, { MODEL_APPLE_INTELLIGENCE } from "../../../src/compat/index.js";
+import OpenAI, { MODEL_DEFAULT } from "../../../src/compat/index.js";
 import type { ChatCompletionChunk } from "../../../src/compat/types.js";
 
 // ---------------------------------------------------------------------------
@@ -155,8 +155,8 @@ beforeEach(() => {
 
 describe("OpenAI compat layer", () => {
   describe("exports", () => {
-    it("exports MODEL_APPLE_INTELLIGENCE constant", () => {
-      expect(MODEL_APPLE_INTELLIGENCE).toBe("apple-intelligence");
+    it("exports MODEL_DEFAULT constant", () => {
+      expect(MODEL_DEFAULT).toBe("SystemLanguageModel");
     });
 
     it("default export is the OpenAI class", () => {
@@ -194,7 +194,7 @@ describe("OpenAI compat layer", () => {
       });
 
       expect(result.object).toBe("chat.completion");
-      expect(result.model).toBe("apple-intelligence");
+      expect(result.model).toBe("SystemLanguageModel");
       expect(result.choices).toHaveLength(1);
       expect(result.choices[0].index).toBe(0);
       expect(result.choices[0].finish_reason).toBe("stop");

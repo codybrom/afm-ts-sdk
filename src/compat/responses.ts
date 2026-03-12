@@ -33,7 +33,7 @@ import type {
 } from "./responses-types.js";
 import type { ChatCompletionTool } from "./types.js";
 
-const MODEL_APPLE_INTELLIGENCE = "apple-intelligence";
+const MODEL_DEFAULT = "SystemLanguageModel";
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -159,9 +159,9 @@ function orderKeys(value: JsonObject[string], schema: JsonSchema): JsonObject[st
 function mapResponseParams(params: ResponseCreateParams): GenerationOptions {
   const options: GenerationOptions = {};
 
-  if (params.model !== undefined && params.model !== "apple-intelligence") {
+  if (params.model !== undefined && params.model !== "SystemLanguageModel") {
     console.warn(
-      `[tsfm compat] Model "${params.model}" is not supported. Use "apple-intelligence" or omit the model field.`,
+      `[tsfm compat] Model "${params.model}" is not supported. Use "SystemLanguageModel" or omit the model field.`,
     );
   }
 
@@ -357,7 +357,7 @@ function buildResponse(
     id: makeId(),
     object: "response",
     created_at: nowSeconds(),
-    model: MODEL_APPLE_INTELLIGENCE,
+    model: MODEL_DEFAULT,
     output,
     output_text: outputText,
     status,

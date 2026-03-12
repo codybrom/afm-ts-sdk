@@ -1,6 +1,6 @@
 # OpenAI Compatibility
 
-TSFM ships an OpenAI-compatible interface at `tsfm-sdk/openai`. It supports both the **Responses API** (`responses.create()`) and the **Chat Completions API** (`chat.completions.create()`), so you can swap in on-device Apple Intelligence with minimal code changes. No API key, no network, no server.
+TSFM ships an OpenAI-compatible interface at `tsfm-sdk/openai`. It supports both the **Responses API** (`responses.create()`) and the **Chat Completions API** (`chat.completions.create()`) so you can swap in on-device Apple Intelligence with minimal code changes.
 
 ```ts
 import OpenAI from "tsfm-sdk/openai";
@@ -9,7 +9,7 @@ const client = new OpenAI();
 
 // Responses API (recommended)
 const response = await client.responses.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   instructions: "You are a helpful assistant.",
   input: "What is the capital of France?",
 });
@@ -17,7 +17,7 @@ console.log(response.output_text);
 
 // Chat Completions API
 const completion = await client.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: [
     { role: "system", content: "You are a helpful assistant." },
     { role: "user", content: "What is the capital of France?" },
@@ -28,49 +28,46 @@ console.log(completion.choices[0].message.content);
 client.close();
 ```
 
-If you've used the OpenAI Node SDK before, this should feel familiar. The differences are:
+If you've used OpenAI's Node SDK, or OpenAI-like APIs, it should feel familiar. The biggest difference is that the `model` param can be omitted or set to `"SystemLanguageModel"`
 
-1. Import from `tsfm-sdk/openai` instead of `openai`
-2. No API key needed
-3. `model` can be omitted or set to `"apple-intelligence"`
+## What TSFM Supports
 
-## Supported Features
+Both APIs support the same core capabilities through the tsfm compatibility layer:
 
-Both APIs support the same core capabilities:
-
-| Feature | Responses API | Chat Completions API |
-| --- | --- | --- |
-| Text generation | `input: "..."` | `messages: [...]` |
-| Multi-turn conversations | `input: [...]` (message array) | `messages: [...]` |
-| Streaming | `stream: true` | `stream: true` |
-| Structured output | `text: { format: { type: "json_schema" } }` | `response_format: { type: "json_schema" }` |
-| Tool calling | `tools: [{ type: "function", name, ... }]` | `tools: [{ type: "function", function: { name, ... } }]` |
-| `temperature`, `max_output_tokens` | Supported | Supported (`max_tokens` / `max_completion_tokens`) |
-| `top_p`, `seed` | Supported | Supported |
-| Image/audio content | Not supported (warns) | Not supported (warns) |
-| `usage` | Always `null` | Always `null` |
+| Feature | Responses API | Chat Completions API | tsfm Support |
+| --- | --- | --- | --- |
+| Text generation | `input: "..."` | `messages: [...]` | Full |
+| Multi-turn conversations | `input: [...]` (message array) | `messages: [...]` | Full |
+| Streaming | `stream: true` | `stream: true` | Full |
+| Structured output | `text: { format: { type: "json_schema" } }` | `response_format: { type: "json_schema" }` | Full |
+| Tool calling | `tools: [{ type: "function", name, ... }]` | `tools: [{ type: "function", function: { name, ... } }]` | Full |
+| `temperature`, `max_output_tokens` | `temperature`, `max_output_tokens` | `temperature`, `max_tokens` / `max_completion_tokens` | Full |
+| `top_p`, `seed` | `top_p`, `seed` | `top_p`, `seed` | Full |
+| Image/audio content | `input_image`, `input_file` | Image URLs | Not supported (warns) |
+| `usage` / token counts | `usage` | `usage` | Always `null` |
 
 ---
 
 ## Responses API
 
-The Responses API is OpenAI's modern interface. It uses `client.responses.create()` with a simpler input model and richer output structure.
+The Responses API is OpenAI's modern interface. It uses a `client.responses.create()` function with a simpler input model and richer output structure.
 
 ### Basic Usage
 
-The simplest form takes a string `input`:
+The simplest `responses.create()` call takes a string `input`:
 
 ```ts
 const response = await client.responses.create({
   input: "What is the capital of France?",
 });
 
-console.log(response.output_text); // convenience accessor for text output
+// Outputs are available on the response object
+console.log(response.output_text); 
 ```
 
 ### Instructions
 
-System instructions are a top-level parameter, not a message role:
+In the Responses API, system instructions are a top-level parameter rather than a message role:
 
 ```ts
 const response = await client.responses.create({
@@ -81,7 +78,7 @@ const response = await client.responses.create({
 
 ### Multi-turn Conversations
 
-Pass an array of input items for multi-turn conversations:
+For multi-turn conversations with `responses.create()`, pass an array of input items:
 
 ```ts
 const response = await client.responses.create({
@@ -96,7 +93,7 @@ const response = await client.responses.create({
 
 ### Streaming
 
-Pass `stream: true` to get a `ResponseStream` of typed events:
+Pass `stream: true` to `responses.create()` to get a `ResponseStream` of typed events:
 
 ```ts
 const stream = await client.responses.create({
@@ -127,12 +124,12 @@ Key event types:
 | `response.incomplete` | Generation stopped early |
 
 ::: warning
-Structured output and tool call responses are buffered — the model must finish constrained generation before events are emitted. Only plain text streams token-by-token.
+When streaming structured output or tool calls, the full response is generated before any events are emitted. This is because Foundation Models uses constrained generation (a grammar that forces valid JSON), which cannot be interrupted mid-token. Plain text generation is the only mode that streams incrementally as tokens are produced.
 :::
 
 ### Structured Output
 
-Use `text.format` with `type: "json_schema"`:
+The Responses API uses `text.format` with `type: "json_schema"` for structured output:
 
 ```ts
 const response = await client.responses.create({
@@ -160,7 +157,7 @@ const person = JSON.parse(response.output_text);
 
 ### Tool Calling
 
-Tools use a flat format — `name` and `parameters` are at the top level (not nested under `function`):
+The Responses API uses a flat tool format with `name` and `parameters` at the top level (not nested under `function` like Chat Completions):
 
 ```ts
 const response = await client.responses.create({
@@ -242,7 +239,7 @@ const response = await client.responses.create({
   id: "resp_...",
   object: "response",
   created_at: 1710000000,
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   output: [
     {
       id: "msg_...",
@@ -449,7 +446,7 @@ const response = await client.chat.completions.create({
   id: "chatcmpl-...",           // Unique ID
   object: "chat.completion",    // Or "chat.completion.chunk" for streaming
   created: 1710000000,          // Unix timestamp (seconds)
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   choices: [{
     index: 0,
     message: {

@@ -13,7 +13,7 @@ describe("Responses API — side-by-side with Chat Completions", () => {
   it("both APIs produce text for a simple prompt", async () => {
     const [chat, responses] = await Promise.all([
       client.chat.completions.create({
-        model: "apple-intelligence",
+        model: "SystemLanguageModel",
         messages: [
           { role: "system", content: "Always respond with exactly one word." },
           { role: "user", content: "What color is the sky?" },
@@ -206,7 +206,7 @@ describe("Responses API — standalone", () => {
     expect(response.id).toMatch(/^resp_/);
     expect(response.object).toBe("response");
     expect(typeof response.created_at).toBe("number");
-    expect(response.model).toBe("apple-intelligence");
+    expect(response.model).toBe("SystemLanguageModel");
     expect(response.status).toBe("completed");
     expect(response.error).toBeNull();
     expect(response.incomplete_details).toBeNull();

@@ -51,7 +51,7 @@ console.log("=== Turn 2 (Apple Intelligence on-device) ===");
 console.log("User:", messages[messages.length - 1].content);
 
 const turn2 = await local.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: messages as Parameters<typeof local.chat.completions.create>[0]["messages"],
 });
 const reply2 = turn2.choices[0].message.content!;
@@ -85,7 +85,7 @@ console.log("=== Turn 4 (Apple Intelligence on-device) ===");
 console.log("User:", messages[messages.length - 1].content);
 
 const turn4 = await local.chat.completions.create({
-  model: "apple-intelligence",
+  model: "SystemLanguageModel",
   messages: messages as Parameters<typeof local.chat.completions.create>[0]["messages"],
 });
 const reply4 = turn4.choices[0].message.content!;

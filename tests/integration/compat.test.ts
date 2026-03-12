@@ -7,7 +7,7 @@ afterAll(() => client.close());
 describe("OpenAI compat integration", () => {
   it("basic text generation", async () => {
     const response = await client.chat.completions.create({
-      model: "apple-intelligence",
+      model: "SystemLanguageModel",
       messages: [
         { role: "system", content: "Always respond with exactly one word." },
         { role: "user", content: "What color is the sky?" },

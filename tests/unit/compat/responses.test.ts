@@ -174,7 +174,7 @@ describe("Responses API compat layer", () => {
       })) as Response;
 
       expect(result.object).toBe("response");
-      expect(result.model).toBe("apple-intelligence");
+      expect(result.model).toBe("SystemLanguageModel");
       expect(result.status).toBe("completed");
       expect(result.id).toMatch(/^resp_/);
       expect(result.output).toHaveLength(1);
@@ -430,7 +430,7 @@ describe("Responses API compat layer", () => {
       expect(result.id).toMatch(/^resp_/);
       expect(result.object).toBe("response");
       expect(typeof result.created_at).toBe("number");
-      expect(result.model).toBe("apple-intelligence");
+      expect(result.model).toBe("SystemLanguageModel");
       expect(result.status).toBe("completed");
       expect(result.error).toBeNull();
       expect(result.incomplete_details).toBeNull();

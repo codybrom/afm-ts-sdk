@@ -62,15 +62,15 @@ describe("mapParams", () => {
     expect(console.warn).toHaveBeenCalledTimes(3);
   });
 
-  it("warns when model is not apple-intelligence", () => {
+  it("warns when model is not SystemLanguageModel", () => {
     mapParams({ model: "gpt-4o" });
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining("gpt-4o"),
     );
   });
 
-  it("does not warn when model is apple-intelligence", () => {
-    mapParams({ model: "apple-intelligence" });
+  it("does not warn when model is SystemLanguageModel", () => {
+    mapParams({ model: "SystemLanguageModel" });
     expect(console.warn).not.toHaveBeenCalled();
   });
 

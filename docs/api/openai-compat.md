@@ -3,7 +3,7 @@
 API reference for `tsfm-sdk/openai`. This module provides both the Responses API and Chat Completions API backed by on-device Apple Intelligence.
 
 ```ts
-import OpenAI, { Stream, ResponseStream, MODEL_APPLE_INTELLIGENCE } from "tsfm-sdk/openai";
+import OpenAI, { Stream, ResponseStream, MODEL_DEFAULT } from "tsfm-sdk/openai";
 ```
 
 ## OpenAI
@@ -186,7 +186,7 @@ Only `json_schema` triggers constrained generation.
   id: string;                    // "resp_<uuid>"
   object: "response";
   created_at: number;            // Unix timestamp (seconds)
-  model: string;                 // "apple-intelligence"
+  model: string;                 // "SystemLanguageModel"
   output: ResponseOutputItem[];
   output_text: string;           // convenience: concatenated text from output messages
   status: "completed" | "failed" | "incomplete";
@@ -465,7 +465,7 @@ Only `json_schema` triggers constrained generation. `text` and `json_object` are
   id: string;                    // "chatcmpl-<uuid>"
   object: "chat.completion";
   created: number;               // Unix timestamp (seconds)
-  model: string;                 // "apple-intelligence"
+  model: string;                 // "SystemLanguageModel"
   choices: ChatCompletionChoice[];
   usage: null;
   system_fingerprint: null;
@@ -547,19 +547,19 @@ The stream auto-closes on iteration completion, `break`, or error. A `Finalizati
 
 ## Constants
 
-### MODEL_APPLE_INTELLIGENCE
+### MODEL_DEFAULT
 
 ```ts
-const MODEL_APPLE_INTELLIGENCE = "apple-intelligence";
+const MODEL_DEFAULT = "SystemLanguageModel";
 ```
 
-Standard model identifier. Optional — the compat layer uses the on-device model regardless of what model string you pass.
+Placeholder model identifier for the on-device foundation model. Unlike the actual OpenAI api, it be omitted since only one model is available.
 
 ---
 
 ## CompatError
 
-Error class with an HTTP-style status code, thrown for `RateLimitedError` (status `429`).
+Error class with an HTTP-style status code, thrown for `RateLimitedError` (status 429).
 
 ```ts
 class CompatError extends Error {
