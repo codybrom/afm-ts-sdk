@@ -56,11 +56,15 @@ export class ResponseStream implements AsyncIterable<ResponseStreamEvent> {
     const iterator = this._iterator;
     return new ReadableStream<ResponseStreamEvent>({
       async pull(controller) {
-        const { value, done } = await iterator.next();
-        if (done) {
-          controller.close();
-        } else {
-          controller.enqueue(value);
+        try {
+          const { value, done } = await iterator.next();
+          if (done) {
+            controller.close();
+          } else {
+            controller.enqueue(value);
+          }
+        } catch (err) {
+          controller.error(err);
         }
       },
     });

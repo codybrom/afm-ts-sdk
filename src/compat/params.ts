@@ -11,7 +11,6 @@ const UNSUPPORTED_PARAMS: ReadonlyArray<keyof ChatCompletionCreateParams> = [
   "presence_penalty",
   "logit_bias",
   "parallel_tool_calls",
-  "tool_choice",
   "service_tier",
   "store",
   "metadata",
@@ -34,7 +33,7 @@ const UNSUPPORTED_PARAMS: ReadonlyArray<keyof ChatCompletionCreateParams> = [
  * Maps OpenAI-style ChatCompletionCreateParams into tsfm's GenerationOptions.
  * Emits console.warn for unsupported params and non-standard model names.
  */
-export function mapParams(params: ChatCompletionCreateParams): GenerationOptions {
+export function mapParams(params: Partial<ChatCompletionCreateParams>): GenerationOptions {
   const options: GenerationOptions = {};
 
   // Warn on non-standard model names
@@ -51,6 +50,11 @@ export function mapParams(params: ChatCompletionCreateParams): GenerationOptions
 
   // max_completion_tokens takes priority over max_tokens
   if (params.max_completion_tokens != null) {
+    if (params.max_tokens != null) {
+      console.warn(
+        `[tsfm compat] Both "max_tokens" and "max_completion_tokens" are set. "max_completion_tokens" will be used.`,
+      );
+    }
     options.maximumResponseTokens = params.max_completion_tokens;
   } else if (params.max_tokens != null) {
     options.maximumResponseTokens = params.max_tokens;
@@ -65,6 +69,14 @@ export function mapParams(params: ChatCompletionCreateParams): GenerationOptions
       ...(topP !== undefined ? { probabilityThreshold: topP } : {}),
       ...(seed !== undefined ? { seed } : {}),
     });
+  }
+
+  // Specific warning for tool_choice since it affects expected behavior
+  if (params.tool_choice != null && params.tool_choice !== "auto") {
+    console.warn(
+      `[tsfm compat] Parameter "tool_choice" value "${typeof params.tool_choice === "string" ? params.tool_choice : "object"}" is not supported. ` +
+        `Apple Foundation Models always uses "auto" tool selection. The parameter will be ignored.`,
+    );
   }
 
   // Warn on unsupported params that are non-null

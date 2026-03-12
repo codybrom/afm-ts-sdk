@@ -16,20 +16,53 @@ hero:
       text: View on GitHub
       link: https://github.com/codybrom/tsfm
 
-features:
-  - icon: 🔒
-    title: On-Device Inference
-    details: Runs entirely on Apple Silicon. Your data never leaves the machine — no network requests, no API keys.
-  - icon: ⚡
-    title: Streaming Generation
-    details: Async iterator interface for token-by-token streaming. Process responses as they're generated.
-  - icon: 🧩
-    title: Structured Output
-    details: Typed schemas with generation guides constrain output to exactly the shape you need.
-  - icon: 🛠️
-    title: Tool Calling
-    details: Give the model tools to call during generation. Define schemas, implement handlers, get structured results.
-  - icon: 🔄
-    title: OpenAI Compatible
-    details: Drop-in replacement for the OpenAI SDK. Same messages, same responses, same streaming — backed by on-device inference.
 ---
+
+<div class="home-content">
+
+<div class="home-links">
+
+[Streaming](/guide/streaming) · [Structured Output](/guide/structured-output) · [Tool Calling](/guide/tools) · [OpenAI Compatible](/guide/openai-compatibility)
+
+Requires macOS 26+ on Apple Silicon with Apple Intelligence enabled.
+
+</div>
+
+```ts
+// npm install tsfm-sdk
+
+import { LanguageModelSession } from "tsfm-sdk";
+
+const session = new LanguageModelSession();
+const reply = await session.respond("What is the capital of France?");
+console.log(reply); // "The capital of France is Paris."
+```
+
+<div class="home-openai-box">
+<div class="home-heading">Already using OpenAI?</div>
+<p class="home-subheading">Change your import and keep going.</p>
+
+```ts
+import OpenAI from "tsfm-sdk/openai"; // ← just change this
+
+const client = new OpenAI();
+
+const response = await client.responses.create({
+  // model: "gpt-4o",
+  instructions: "You are a helpful assistant.",
+  input: "What is the capital of France?",
+});
+
+console.log(response.output_text);
+
+client.close();
+```
+
+<p class="home-openai-link">
+
+[Learn more about the OpenAI compatibility layer →](/guide/openai-compatibility)
+
+</p>
+</div>
+
+</div>

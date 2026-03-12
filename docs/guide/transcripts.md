@@ -1,10 +1,18 @@
 # Transcripts
 
-Transcripts let you save and restore session history, enabling persistent conversations across process restarts. This maps to Foundation Models' [`Transcript`](https://developer.apple.com/documentation/foundationmodels/transcript), which records instructions, user prompts, responses and tool results as a linear history.
+Transcripts let you save and restore session history, enabling persistent conversations across process restarts. The transcript records instructions, user prompts, responses and tool results as a linear history.
+
+::: info
+The **Swift** equivalent is Foundation Models' [`Transcript`](https://developer.apple.com/documentation/foundationmodels/transcript).
+:::
 
 ## Entry Types
 
-A transcript is a linear sequence of entries. These match the [`Transcript.Entry`](https://developer.apple.com/documentation/foundationmodels/transcript) cases in Swift:
+A transcript is a linear sequence of entries.
+
+::: info
+The **Swift** equivalent is [`Transcript.Entry`](https://developer.apple.com/documentation/foundationmodels/transcript).
+:::
 
 | Role | Description |
 | --- | --- |

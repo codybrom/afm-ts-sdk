@@ -1,6 +1,10 @@
 # Streaming
 
-TSFM can stream responses token-by-token using an async iterator. Foundation Models' native streaming yields cumulative snapshots and the TSFM SDK diffs them internally so you receive only new tokens on each iteration. Under the hood, this is wrapping Foundation Models' [`ResponseStream`](https://developer.apple.com/documentation/foundationmodels/languagemodelsession/responsestream).
+TSFM can stream responses token-by-token using an async iterator. The on-device model produces cumulative snapshots, and the SDK diffs them internally so you receive only the new tokens on each iteration.
+
+::: info
+The **Swift** equivalent is [`LanguageModelSession.ResponseStream`](https://developer.apple.com/documentation/foundationmodels/languagemodelsession/responsestream).
+:::
 
 ## Basic Streaming
 

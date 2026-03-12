@@ -20,6 +20,7 @@ import {
 } from "./tools.js";
 import { Stream } from "./stream.js";
 import { Responses } from "./responses.js";
+import { reorderJson, nowSeconds, CompatError } from "./utils.js";
 import type {
   ChatCompletionCreateParams,
   ChatCompletion,
@@ -54,62 +55,6 @@ interface TranscriptJson {
 
 function makeId(): string {
   return "chatcmpl-" + randomUUID();
-}
-
-/**
- * Reorder JSON keys to match the property order defined in a JSON schema.
- * OpenAI returns keys in schema-defined order; Apple returns them in
- * generation order. This normalizes the output for compatibility.
- */
-function reorderJson(json: string, schema: JsonSchema): string {
-  try {
-    const obj = JSON.parse(json);
-    return JSON.stringify(orderKeys(obj, schema));
-  } catch {
-    return json;
-  }
-}
-
-function orderKeys(value: JsonObject[string], schema: JsonSchema): JsonObject[string] {
-  if (value == null || typeof value !== "object" || Array.isArray(value)) return value;
-
-  const props = schema.properties as Record<string, JsonSchema> | undefined;
-  if (!props) return value;
-
-  const obj = value as JsonObject;
-  const ordered: JsonObject = {};
-
-  // First, add keys in schema property order
-  for (const key of Object.keys(props)) {
-    if (key in obj) {
-      ordered[key] = orderKeys(obj[key], props[key]);
-    }
-  }
-  // Then any extra keys not in schema (shouldn't happen with strict schemas)
-  for (const key of Object.keys(obj)) {
-    if (!(key in ordered)) {
-      ordered[key] = obj[key];
-    }
-  }
-  return ordered;
-}
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-// ---------------------------------------------------------------------------
-// Error wrapping
-// ---------------------------------------------------------------------------
-
-class CompatError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "CompatError";
-    this.status = status;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -378,6 +323,10 @@ export default class OpenAI {
 
   close(): void {
     this._model.dispose();
+  }
+
+  [Symbol.dispose](): void {
+    this.close();
   }
 }
 

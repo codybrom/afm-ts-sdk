@@ -51,13 +51,27 @@ export function buildToolInstructions(tools: ChatCompletionTool[]): string {
  * Each tool's parameters are namespaced under a per-tool `$defs` entry
  * to avoid property name collisions when multiple tools define parameters
  * with the same name but different types or meanings.
+ *
+ * Throws if duplicate tool names are provided or if multiple tools define
+ * the same parameter name with different schemas.
  */
 export function buildToolSchema(tools: ChatCompletionTool[]): JsonSchema {
   const toolNames = tools.map((t) => t.function.name);
 
+  // Validate tool name uniqueness
+  const nameSet = new Set<string>();
+  for (const name of toolNames) {
+    if (nameSet.has(name)) {
+      throw new Error(
+        `[tsfm compat] Duplicate tool name "${name}". Each tool must have a unique name.`,
+      );
+    }
+    nameSet.add(name);
+  }
+
   // Build a merged arguments schema from all tools' parameters.
   // Foundation Models requires fully specified schemas — no open-ended objects.
-  // Warn when multiple tools define the same property name — the last one wins.
+  // Throw when multiple tools define the same property name with different schemas.
   const mergedProperties: Record<string, JsonSchema> = {};
   const seenPropertySources = new Map<string, string>();
   for (const tool of tools) {
@@ -67,10 +81,14 @@ export function buildToolSchema(tools: ChatCompletionTool[]): JsonSchema {
       for (const [key, value] of Object.entries(props)) {
         const prev = seenPropertySources.get(key);
         if (prev !== undefined) {
-          console.warn(
-            `[tsfm compat] Tool parameter "${key}" is defined by both "${prev}" and "${tool.function.name}". ` +
-              `The schema from "${tool.function.name}" will be used. This may cause incorrect tool arguments.`,
-          );
+          const existingSchema = JSON.stringify(mergedProperties[key]);
+          const newSchema = JSON.stringify(value);
+          if (existingSchema !== newSchema) {
+            throw new Error(
+              `[tsfm compat] Tool parameter "${key}" is defined by both "${prev}" and "${tool.function.name}" ` +
+                `with different schemas. Rename one of the parameters to avoid conflicts.`,
+            );
+          }
         }
         seenPropertySources.set(key, tool.function.name);
         mergedProperties[key] = value;
@@ -145,6 +163,11 @@ export function parseToolResponse(parsed: ToolModelOutput): ToolParseResult {
 
     const { name, arguments: args = {} } = parsed.tool_call;
 
+    // Ensure arguments is an object before serializing — if the model
+    // returns a string or other primitive, wrap it to avoid malformed JSON.
+    const normalizedArgs =
+      args != null && typeof args === "object" && !Array.isArray(args) ? args : {};
+
     return {
       type: "tool_call",
       toolCall: {
@@ -152,7 +175,7 @@ export function parseToolResponse(parsed: ToolModelOutput): ToolParseResult {
         type: "function",
         function: {
           name,
-          arguments: JSON.stringify(args),
+          arguments: JSON.stringify(normalizedArgs),
         },
       },
     };

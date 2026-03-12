@@ -1,6 +1,10 @@
 # Generation Options
 
-Control temperature, token limits, and sampling strategy for any generation method. These map directly to Foundation Models' [GenerationOptions](https://developer.apple.com/documentation/foundationmodels/generationoptions).
+Control temperature, token limits, and sampling strategy for any generation method.
+
+::: info
+The **Swift** equivalent is Foundation Models' [`GenerationOptions`](https://developer.apple.com/documentation/foundationmodels/generationoptions).
+:::
 
 ## Usage
 
@@ -28,7 +32,11 @@ const reply = await session.respond("Write a haiku about rain", {
 
 ## Sampling Modes
 
-The model builds its response token by token. At each step it produces a probability distribution over its vocabulary. The sampling mode controls how a token is selected from that distribution. These map to Foundation Models' [`SamplingMode`](https://developer.apple.com/documentation/foundationmodels/generationoptions/samplingmode).
+The model builds its response token by token. At each step it produces a probability distribution over its vocabulary. The sampling mode controls how a token is selected from that distribution.
+
+::: info
+The **Swift** equivalent is Foundation Models' [`SamplingMode`](https://developer.apple.com/documentation/foundationmodels/generationoptions/samplingmode).
+:::
 
 ### Greedy (Most Deterministic)
 

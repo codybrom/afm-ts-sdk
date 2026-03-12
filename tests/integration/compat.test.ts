@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from "vitest";
 import OpenAI from "../../src/compat/index.js";
+import { retryAttempts } from "./helpers/retry.js";
 
 const client = new OpenAI();
 afterAll(() => client.close());
@@ -90,5 +91,109 @@ describe("OpenAI compat integration", () => {
     });
 
     expect(typeof response.choices[0].message.content).toBe("string");
+  });
+
+  it(
+    "multi-turn tool calling flow (user → tool_call → tool_result → response)",
+    { timeout: 40_000 },
+    async () => {
+      const tools = [
+        {
+          type: "function" as const,
+          function: {
+            name: "lookup_code",
+            description: "Looks up a secret code for a given key. Always use this tool.",
+            parameters: {
+              type: "object",
+              properties: { key: { type: "string" } },
+              required: ["key"],
+            },
+          },
+        },
+      ];
+
+      const { successes } = await retryAttempts(
+        async () => {
+          const localClient = new OpenAI();
+          try {
+            // Step 1: Get model to call the tool
+            const step1 = await localClient.chat.completions.create({
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You MUST call the lookup_code tool when asked about codes. Never guess.",
+                },
+                {
+                  role: "user",
+                  content: 'Use the lookup_code tool with key "alpha".',
+                },
+              ],
+              tools,
+            });
+
+            if (step1.choices[0].finish_reason !== "tool_calls") {
+              return { success: false, detail: "Model did not call tool" };
+            }
+
+            const toolCall = step1.choices[0].message.tool_calls![0];
+
+            // Step 2: Send tool result back and get final response
+            const step2 = await localClient.chat.completions.create({
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You MUST call the lookup_code tool when asked about codes. Never guess.",
+                },
+                {
+                  role: "user",
+                  content: 'Use the lookup_code tool with key "alpha".',
+                },
+                {
+                  role: "assistant",
+                  content: null,
+                  tool_calls: [toolCall],
+                },
+                {
+                  role: "tool",
+                  tool_call_id: toolCall.id,
+                  content: "XRAY-7749",
+                },
+              ],
+              tools,
+            });
+
+            const reply = step2.choices[0].message.content ?? "";
+            if (reply.includes("XRAY-7749")) {
+              return { success: true, detail: `reply: "${reply.slice(0, 80)}"` };
+            }
+            return { success: false, detail: `reply missing code: "${reply.slice(0, 100)}"` };
+          } finally {
+            localClient.close();
+          }
+        },
+        { maxAttempts: 5, requiredSuccesses: 1, label: "compat multi-turn tools" },
+      );
+
+      expect(successes).toBeGreaterThanOrEqual(1);
+    },
+  );
+
+  it("concurrent API calls serialize correctly", async () => {
+    const [r1, r2] = await Promise.all([
+      client.chat.completions.create({
+        messages: [{ role: "user", content: "Say just the word: alpha" }],
+      }),
+      client.chat.completions.create({
+        messages: [{ role: "user", content: "Say just the word: beta" }],
+      }),
+    ]);
+
+    // Both should complete successfully with distinct content
+    expect(r1.choices[0].finish_reason).toBe("stop");
+    expect(r2.choices[0].finish_reason).toBe("stop");
+    expect(typeof r1.choices[0].message.content).toBe("string");
+    expect(typeof r2.choices[0].message.content).toBe("string");
   });
 });

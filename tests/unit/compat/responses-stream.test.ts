@@ -158,6 +158,23 @@ describe("ResponseStream", () => {
     expect(cleanup).toHaveBeenCalledOnce();
   });
 
+  it("toReadableStream() propagates errors from the iterator", async () => {
+    async function* errorSource(): AsyncIterable<ResponseStreamEvent> {
+      yield makeEvent("delta", 0);
+      throw new Error("stream error");
+    }
+    const stream = new ResponseStream(errorSource());
+    const readable = stream.toReadableStream();
+    const reader = readable.getReader();
+
+    // First read succeeds
+    const first = await reader.read();
+    expect(first.done).toBe(false);
+
+    // Second read should reject with the error
+    await expect(reader.read()).rejects.toThrow("stream error");
+  });
+
   it("FinalizationRegistry callback invokes the cleanup function", () => {
     const registryCallback = getRegistryCallback();
     expect(registryCallback).toBeTypeOf("function");

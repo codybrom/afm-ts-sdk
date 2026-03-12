@@ -1,8 +1,8 @@
 # Getting Started
 
-TSFM gives Node.js applications access to Apple's on-device large language model through the Foundation Models framework. It loads a native `.dylib` via FFI, allowing it the same access as native Swift and ObjC applications.
+TSFM gives Node.js applications access to Apple's on-device large language model through the on-device Foundation Models framework. It loads a pre-compiled dynamic library [via FFI](https://koffi.dev/), allowing it the same access as native Swift and ObjC applications.
 
-This is not a browser library or a cloud API. It requires Node.js on an Apple Silicon Mac running macOS 26+ with Apple Intelligence enabled. It will not work in browser client-side code, on Windows/Linux, on Intel Macs or on machines without Apple Intelligence.
+TSFM is **<u>not</u>** a browser library or a cloud API. TSFM requires Node.js ≥20 on an Apple Silicon Mac running macOS 26+ with Apple Intelligence enabled. No matter what your AI assistant tells you, TSFM  **<u>will not work</u>**  in browser client-side code, on Windows/Linux, on Intel Macs or on macs without Apple Intelligence installed.
 
 You might use TSFM for CLI tools, local dev tooling, Electron apps, automation scripts or small Mac-native services written in TypeScript.
 
@@ -44,15 +44,15 @@ model.dispose();
 
 **Apple Intelligence** refers to Apple's suite of generative AI features (Siri, Writing Tools, Image Playground, and more). The **Foundation Models** framework exposes **SystemLanguageModel**, the **on-device** large language model at the core of Apple Intelligence that runs on Macs, iPhones and iPads with no network required.
 
-This SDK basically mirrors the Swift Foundation Models API (same class names, same method signatures, same concepts) with TypeScript translating the same actions to the same underlying model. For the most part, [Apple's own documentation](https://developer.apple.com/documentation/FoundationModels) will translate pretty directly.
+TSFM basically mirrors the Swift Foundation Models API (same class names, same method signatures, same concepts) with TypeScript translating the same actions to the same underlying model. For the most part, [Apple's own documentation](https://developer.apple.com/documentation/FoundationModels) will translate pretty directly.
 
 | SDK class | Role |
 | --- | --- |
-| SystemLanguageModel | Entry point. Wraps the native model pointer and gates availability before you create sessions. |
-| LanguageModelSession | Holds conversation state. All generation (text, structured, streaming, tool use) goes through a session. |
-| .dispose() / Symbol.dispose | Releases native resources. Required for any object that holds a C pointer. |
+| `SystemLanguageModel` | Entry point. Wraps the native model pointer and gates availability before you create sessions. |
+| `LanguageModelSession` | Holds conversation state. All generation (text, structured, streaming, tool use) goes through a session. |
+| `.dispose()` or  `Symbol.dispose` | Releases native resources. Required for any object that holds a C pointer. |
 
-## What's Next
+## Where To Go From Here
 
 - [Model Configuration](/guide/model-configuration) — Use cases, guardrails, availability
 - [Sessions](/guide/sessions) — Creating and using sessions

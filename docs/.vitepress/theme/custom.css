@@ -5,21 +5,21 @@
     "Arial", sans-serif;
   --vp-font-family-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, monospace;
 
-  /* Brand — Foundation Models green/teal (darkened for white bg contrast) */
-  --vp-c-brand-1: #1a7f3f;
-  --vp-c-brand-2: #1b8f48;
-  --vp-c-brand-3: #146832;
-  --vp-c-brand-soft: rgba(26, 127, 63, 0.1);
+  /* Brand — Foundation Models teal (shifted from pure green for readability) */
+  --vp-c-brand-1: #0e6856;
+  --vp-c-brand-2: #127a65;
+  --vp-c-brand-3: #0a5445;
+  --vp-c-brand-soft: rgba(14, 104, 86, 0.1);
 
   /* Surfaces — Apple dev docs palette */
   --vp-c-bg: #ffffff;
   --vp-c-bg-soft: #f5f5f7;
   --vp-c-bg-mute: #e8e8ed;
 
-  /* Text — Apple gray scale */
+  /* Text — Apple gray scale (text-3 darkened for WCAG AA 4.5:1 contrast) */
   --vp-c-text-1: #1d1d1f;
   --vp-c-text-2: #6e6e73;
-  --vp-c-text-3: #86868b;
+  --vp-c-text-3: #707074;
 
   /* Home hero gradient — matches the FM icon */
   --vp-home-hero-name-color: transparent;
@@ -34,13 +34,13 @@
   /* Buttons */
   --vp-button-brand-border: transparent;
   --vp-button-brand-text: #ffffff;
-  --vp-button-brand-bg: #1a7f3f;
+  --vp-button-brand-bg: #0e6856;
   --vp-button-brand-hover-border: transparent;
   --vp-button-brand-hover-text: #ffffff;
-  --vp-button-brand-hover-bg: #1b8f48;
+  --vp-button-brand-hover-bg: #127a65;
   --vp-button-brand-active-border: transparent;
   --vp-button-brand-active-text: #ffffff;
-  --vp-button-brand-active-bg: #146832;
+  --vp-button-brand-active-bg: #0a5445;
 
   /* Code — Apple dev docs style */
   --vp-code-block-bg: #f5f5f7;
@@ -59,10 +59,10 @@
   --vp-c-text-2: #a1a1a6;
   --vp-c-text-3: #86868b;
 
-  --vp-c-brand-1: #6dd57e;
-  --vp-c-brand-2: #5ec76e;
-  --vp-c-brand-3: #30b8d0;
-  --vp-c-brand-soft: rgba(109, 213, 126, 0.12);
+  --vp-c-brand-1: #29d297;
+  --vp-c-brand-2: #24c48c;
+  --vp-c-brand-3: #1fb681;
+  --vp-c-brand-soft: rgba(41, 210, 151, 0.12);
 
   --vp-button-brand-bg: #6dd57e;
   --vp-button-brand-text: #1c1c1e;
@@ -74,10 +74,24 @@
   --vp-code-block-bg: #1c1c1e;
 }
 
-/* Body text — Apple-style readability */
+/* Font rendering — Apple-style antialiasing */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+}
+
+/* Body text */
+.vp-doc {
+  font-size: 1.0625rem;
+  line-height: 1.47;
+  letter-spacing: -0.022em;
+  font-weight: 400;
+}
+
 .vp-doc p,
 .vp-doc li {
-  line-height: 1.5294117647;
+  line-height: 1.5;
   letter-spacing: -0.022em;
 }
 
@@ -92,17 +106,18 @@
   border-radius: 15px;
 }
 
-/* Inline code — subtle, no background pill */
-.vp-doc :not(pre) > code {
-  border-radius: 4px;
-  background-color: transparent;
-  padding: 0;
-  font-size: 0.9em;
-  color: var(--vp-c-brand-1);
+.vp-doc div[class*="language-"] code {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.dark .vp-doc :not(pre) > code {
-  color: var(--vp-c-brand-1);
+/* Inline code — subtle, inherits text color */
+.vp-doc :not(pre) > code {
+  background-color: var(--vp-c-default-soft);
+  border-radius: 3px;
+  padding: 0.15em 0.35em;
+  font-size: 0.9em;
+  color: inherit;
 }
 
 /* Headings with code — no special treatment */
@@ -136,28 +151,79 @@
   color: var(--vp-c-text-2);
 }
 
-/* Feature cards — Apple card style */
-.VPFeature {
-  border-radius: 18px;
-  transition:
-    box-shadow 0.16s ease-out,
-    transform 0.16s ease-out;
+/* Home page */
+.home-content {
+  max-width: 688px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
 }
 
-.VPFeature:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  transform: scale(1.007);
+/* Links — sits above code */
+.home-links {
+  text-align: center;
+  margin-bottom: 2.5rem;
 }
 
-.dark .VPFeature:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+.home-links p:first-child {
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--vp-c-text-1);
+  margin-bottom: 0.5rem;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .VPFeature:hover {
-    transform: none;
-  }
+.home-links a {
+  color: var(--vp-c-brand-1);
 }
+
+.home-links p:last-child {
+  font-size: 0.875rem;
+  color: var(--vp-c-text-3);
+}
+
+/* Main code block */
+.home-content > div[class*="language-"] {
+  margin-bottom: 0;
+}
+
+/* OpenAI box */
+.home-openai-box {
+  background: rgba(41, 210, 151, 0.06);
+  border-radius: 15px;
+  padding: 2rem 2rem 1.5rem;
+  margin-top: 3.5rem;
+}
+
+.home-openai-box div[class*="language-"] {
+  background: var(--vp-c-bg) !important;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.home-heading {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--vp-c-text-1);
+  margin: 0 0 0.25rem;
+}
+
+.home-subheading {
+  font-size: 0.9375rem;
+  color: var(--vp-c-text-2);
+  margin: -0.125rem 0 1.25rem;
+}
+
+.home-openai-link {
+  text-align: right;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.home-openai-link a {
+  color: var(--vp-c-brand-1);
+}
+
 
 /* Nav — Apple-style blur when sticking */
 .VPNav {
@@ -170,9 +236,43 @@
   border-radius: 18px !important;
 }
 
+/* Tables — subtler alternating rows */
+.vp-doc tr:nth-child(2n) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark .vp-doc tr:nth-child(2n) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
 /* Sidebar — tighter, cleaner */
 .VPSidebar .group + .group {
   padding-top: 0.5rem;
+}
+
+/* External link icon — tighter spacing */
+:is(.vp-doc a[href*="://"], .vp-doc a[target="_blank"]):not(
+    :is(.no-icon, svg a, :has(img, svg))
+  )::after {
+  margin-left: 0;
+}
+
+/* Swift equivalent info boxes — caption style */
+.vp-doc .custom-block.info {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: -0.5rem 0 1rem;
+  font-size: 0.9rem;
+  color: var(--vp-c-text-3);
+}
+
+.vp-doc .custom-block.info .custom-block-title {
+  display: none;
+}
+
+.vp-doc .custom-block.info p {
+  margin: 0;
 }
 
 /* Smooth transitions */

@@ -1,6 +1,10 @@
 # Sessions
 
-`LanguageModelSession` manages conversation state and provides all generation methods. It has the same role as [LanguageModelSession](https://developer.apple.com/documentation/foundationmodels/languagemodelsession) in Swift. Each session maintains its own context window and [transcript](/guide/transcripts).
+`LanguageModelSession` manages conversation state and provides all generation methods. Each session maintains its own context window and [transcript](/guide/transcripts).
+
+::: info
+The **Swift** equivalent is [`LanguageModelSession`](https://developer.apple.com/documentation/foundationmodels/languagemodelsession).
+:::
 
 ## Creating a Session
 

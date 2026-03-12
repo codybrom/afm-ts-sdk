@@ -1,6 +1,10 @@
 # Model Configuration
 
-`SystemLanguageModel` is the entry point for the on-device model. It has the same class and role as [SystemLanguageModel](https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel) in Swift and wraps the native model pointer to gate availability before you create sessions.
+`SystemLanguageModel` is the entry point for the on-device model. It wraps the native model pointer to gate availability before you create sessions.
+
+::: info
+The **Swift** equivalent is [`SystemLanguageModel`](https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel).
+:::
 
 ## Creating a Model
 
@@ -21,7 +25,11 @@ Both options are optional and default to the values shown above.
 
 ## Guardrails
 
-Guardrails control how the model handles potentially unsafe content in prompts and responses. These map to Foundation Models' [`Guardrails`](https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/guardrails):
+Guardrails control how the model handles potentially unsafe content in prompts and responses.
+
+::: info
+The **Swift** equivalent is [`SystemLanguageModel.Guardrails`](https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/guardrails).
+:::
 
 | Value | Description |
 | --- | --- |
@@ -38,7 +46,11 @@ With `DEFAULT` guardrails, unsafe content may trigger a `GuardrailViolationError
 
 ## Use Cases
 
-These map directly to Foundation Models' [`UseCase`](https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/usecase) enum:
+Use cases hint to the model what kind of task you're performing.
+
+::: info
+The **Swift** equivalent is [`SystemLanguageModel.UseCase`](https://developer.apple.com/documentation/foundationmodels/systemlanguagemodel/usecase).
+:::
 
 | Value | Description |
 | --- | --- |

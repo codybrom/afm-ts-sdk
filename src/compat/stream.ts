@@ -62,11 +62,15 @@ export class Stream implements AsyncIterable<ChatCompletionChunk> {
     const iterator = this._iterator;
     return new ReadableStream<ChatCompletionChunk>({
       async pull(controller) {
-        const { value, done } = await iterator.next();
-        if (done) {
-          controller.close();
-        } else {
-          controller.enqueue(value);
+        try {
+          const { value, done } = await iterator.next();
+          if (done) {
+            controller.close();
+          } else {
+            controller.enqueue(value);
+          }
+        } catch (err) {
+          controller.error(err);
         }
       },
     });

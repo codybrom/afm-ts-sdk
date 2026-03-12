@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { SystemLanguageModel } from "../core.js";
 import { LanguageModelSession } from "../session.js";
 import { Transcript } from "../transcript.js";
-import type { JsonSchema, JsonObject } from "../schema.js";
+import type { JsonObject } from "../schema.js";
 import { SamplingMode, type GenerationOptions } from "../options.js";
 import {
   ExceededContextWindowSizeError,
@@ -17,6 +17,7 @@ import {
   type ToolModelOutput,
 } from "./tools.js";
 import { ResponseStream } from "./responses-stream.js";
+import { reorderJson, nowSeconds, CompatError } from "./utils.js";
 import type {
   ResponseCreateParams,
   Response,
@@ -90,10 +91,6 @@ function makeId(): string {
   return "resp_" + randomUUID();
 }
 
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
 function makeContentItem(text: string): TranscriptContentItem {
   return { type: "text", text, id: randomUUID() };
 }
@@ -130,31 +127,6 @@ function extractInputText(content: string | Array<{ type: string; text?: string 
     .join("");
 }
 
-/** Reorder JSON keys to match schema property order. */
-function reorderJson(json: string, schema: JsonSchema): string {
-  try {
-    const obj = JSON.parse(json);
-    return JSON.stringify(orderKeys(obj, schema));
-  } catch {
-    return json;
-  }
-}
-
-function orderKeys(value: JsonObject[string], schema: JsonSchema): JsonObject[string] {
-  if (value == null || typeof value !== "object" || Array.isArray(value)) return value;
-  const props = schema.properties as Record<string, JsonSchema> | undefined;
-  if (!props) return value;
-  const obj = value as JsonObject;
-  const ordered: JsonObject = {};
-  for (const key of Object.keys(props)) {
-    if (key in obj) ordered[key] = orderKeys(obj[key], props[key]);
-  }
-  for (const key of Object.keys(obj)) {
-    if (!(key in ordered)) ordered[key] = obj[key];
-  }
-  return ordered;
-}
-
 /** Map ResponseCreateParams to native GenerationOptions. */
 function mapResponseParams(params: ResponseCreateParams): GenerationOptions {
   const options: GenerationOptions = {};
@@ -175,6 +147,13 @@ function mapResponseParams(params: ResponseCreateParams): GenerationOptions {
       ...(topP !== undefined ? { probabilityThreshold: topP } : {}),
       ...(seed !== undefined ? { seed } : {}),
     });
+  }
+
+  if (params.tool_choice != null && params.tool_choice !== "auto") {
+    console.warn(
+      `[tsfm compat] Parameter "tool_choice" value "${typeof params.tool_choice === "string" ? params.tool_choice : "object"}" is not supported. ` +
+        `Apple Foundation Models always uses "auto" tool selection. The parameter will be ignored.`,
+    );
   }
 
   for (const key of UNSUPPORTED_PARAMS) {
@@ -423,19 +402,6 @@ function makeFunctionCall(name: string, args: string): ResponseOutputFunctionToo
 }
 
 // ---------------------------------------------------------------------------
-// Error wrapping
-// ---------------------------------------------------------------------------
-
-class CompatError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "CompatError";
-    this.status = status;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Responses class
 // ---------------------------------------------------------------------------
 
@@ -543,9 +509,9 @@ export class Responses {
       if (err instanceof ExceededContextWindowSizeError) {
         return buildResponse(
           params,
-          [makeOutputMessage("")],
+          [makeOutputMessage("", "incomplete")],
           "incomplete",
-          null,
+          { code: "max_output_tokens", message: err.message },
           "max_output_tokens",
         );
       }
@@ -556,7 +522,13 @@ export class Responses {
         throw new CompatError(err.message, 429);
       }
       if (err instanceof GuardrailViolationError) {
-        return buildResponse(params, [], "incomplete", null, "content_filter");
+        return buildResponse(
+          params,
+          [],
+          "failed",
+          { code: "content_filter", message: err.message },
+          "content_filter",
+        );
       }
       throw err;
     } finally {
@@ -722,7 +694,13 @@ export class Responses {
         yield { type: "response.completed", response: finalResponse, sequence_number: seq++ };
       } catch (err) {
         if (err instanceof ExceededContextWindowSizeError) {
-          const resp = buildResponse(params, [], "incomplete", null, "max_output_tokens");
+          const resp = buildResponse(
+            params,
+            [],
+            "incomplete",
+            { code: "max_output_tokens", message: err.message },
+            "max_output_tokens",
+          );
           yield { type: "response.incomplete", response: resp, sequence_number: seq++ };
           return;
         }
@@ -736,8 +714,14 @@ export class Responses {
           throw new CompatError(err.message, 429);
         }
         if (err instanceof GuardrailViolationError) {
-          const resp = buildResponse(params, [], "incomplete", null, "content_filter");
-          yield { type: "response.incomplete", response: resp, sequence_number: seq++ };
+          const resp = buildResponse(
+            params,
+            [],
+            "failed",
+            { code: "content_filter", message: err.message },
+            "content_filter",
+          );
+          yield { type: "response.failed", response: resp, sequence_number: seq++ };
           return;
         }
         throw err;

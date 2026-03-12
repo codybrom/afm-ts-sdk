@@ -167,8 +167,7 @@ describe("buildToolSchema", () => {
     expect(Object.keys(argsDef.properties as object)).toHaveLength(0);
   });
 
-  it("warns when multiple tools define the same property name", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("throws when multiple tools define the same property name with different schemas", () => {
     const tools: ChatCompletionTool[] = [
       {
         type: "function",
@@ -191,11 +190,58 @@ describe("buildToolSchema", () => {
         },
       },
     ];
-    buildToolSchema(tools);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Tool parameter "query" is defined by both "tool_a" and "tool_b"'),
+    expect(() => buildToolSchema(tools)).toThrow(
+      /Tool parameter "query" is defined by both "tool_a" and "tool_b"/,
     );
-    warnSpy.mockRestore();
+  });
+
+  it("allows multiple tools with the same property name if schemas match", () => {
+    const tools: ChatCompletionTool[] = [
+      {
+        type: "function",
+        function: {
+          name: "tool_a",
+          parameters: {
+            type: "object",
+            properties: { query: { type: "string" } },
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "tool_b",
+          parameters: {
+            type: "object",
+            properties: { query: { type: "string" } },
+          },
+        },
+      },
+    ];
+    const schema = buildToolSchema(tools);
+    const defs = schema.$defs as Record<string, Record<string, unknown>>;
+    const argProps = defs.ToolArguments.properties as Record<string, unknown>;
+    expect(argProps).toHaveProperty("query");
+  });
+
+  it("throws when duplicate tool names are provided", () => {
+    const tools: ChatCompletionTool[] = [
+      {
+        type: "function",
+        function: {
+          name: "get_weather",
+          parameters: { type: "object", properties: { city: { type: "string" } } },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_weather",
+          parameters: { type: "object", properties: { location: { type: "string" } } },
+        },
+      },
+    ];
+    expect(() => buildToolSchema(tools)).toThrow(/Duplicate tool name "get_weather"/);
   });
 });
 
@@ -267,5 +313,32 @@ describe("parseToolResponse", () => {
     const result = parseToolResponse({ type: "unknown_type", content: "some text" });
     expect(result.type).toBe("text");
     expect(result.content).toBe("some text");
+  });
+
+  it("normalizes non-object arguments to empty object", () => {
+    const result = parseToolResponse({
+      type: "tool_call",
+      tool_call: { name: "test", arguments: "not an object" as never },
+    });
+    expect(result.type).toBe("tool_call");
+    expect(result.toolCall!.function.arguments).toBe("{}");
+  });
+
+  it("normalizes array arguments to empty object", () => {
+    const result = parseToolResponse({
+      type: "tool_call",
+      tool_call: { name: "test", arguments: [1, 2, 3] as never },
+    });
+    expect(result.type).toBe("tool_call");
+    expect(result.toolCall!.function.arguments).toBe("{}");
+  });
+
+  it("normalizes null arguments to empty object", () => {
+    const result = parseToolResponse({
+      type: "tool_call",
+      tool_call: { name: "test", arguments: null as never },
+    });
+    expect(result.type).toBe("tool_call");
+    expect(result.toolCall!.function.arguments).toBe("{}");
   });
 });

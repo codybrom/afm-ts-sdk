@@ -22,6 +22,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
+    externalLinkIcon: true,
     logo: "/logo.svg",
 
     nav: [
@@ -45,7 +46,7 @@ export default defineConfig({
           items: [
             { text: "Sessions", link: "/guide/sessions" },
             { text: "Streaming", link: "/guide/streaming" },
-            { text: "Structured Output & JSON Schema", link: "/guide/structured-output" },
+            { text: "Structured Output", link: "/guide/structured-output" },
             { text: "Tools", link: "/guide/tools" },
             { text: "Transcripts", link: "/guide/transcripts" },
           ],

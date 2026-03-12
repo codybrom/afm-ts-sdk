@@ -1,6 +1,10 @@
 # Error Handling
 
-All SDK errors extend `FoundationModelsError`. Generation-specific errors extend `GenerationError`, which itself extends `FoundationModelsError`. These map to Foundation Models' [`GenerationError`](https://developer.apple.com/documentation/foundationmodels/languagemodelsession/generationerror) cases, plus a few SDK-specific additions like `ServiceCrashedError`.
+All SDK errors extend `FoundationModelsError`. Generation-specific errors extend `GenerationError`, which itself extends `FoundationModelsError`. TSFM also adds `ServiceCrashedError` and `ToolCallError`.
+
+::: info
+The **Swift** equivalent is [`LanguageModelSession.GenerationError`](https://developer.apple.com/documentation/foundationmodels/languagemodelsession/generationerror).
+:::
 
 ## Error Hierarchy
 

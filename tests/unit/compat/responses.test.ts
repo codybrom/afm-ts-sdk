@@ -412,6 +412,53 @@ describe("Responses API compat layer", () => {
       warnSpy.mockRestore();
       client.close();
     });
+
+    it("warns when tool_choice is set to a non-auto value", async () => {
+      simulateRespondSuccess("test");
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const client = new OpenAI();
+      await client.responses.create({
+        input: "test",
+        tool_choice: "required",
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"tool_choice" value "required"'),
+      );
+      warnSpy.mockRestore();
+      client.close();
+    });
+
+    it("warns when tool_choice is set to an object value", async () => {
+      simulateRespondSuccess("test");
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const client = new OpenAI();
+      await client.responses.create({
+        input: "test",
+        tool_choice: { type: "function", name: "my_func" },
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"tool_choice" value "object"'));
+      warnSpy.mockRestore();
+      client.close();
+    });
+
+    it("does not warn when tool_choice is auto", async () => {
+      simulateRespondSuccess("test");
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const client = new OpenAI();
+      await client.responses.create({
+        input: "test",
+        tool_choice: "auto",
+      });
+
+      expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("tool_choice"));
+      warnSpy.mockRestore();
+      client.close();
+    });
   });
 
   describe("response object structure", () => {
@@ -697,13 +744,16 @@ describe("Responses API compat layer", () => {
   });
 
   describe("error mapping — non-streaming", () => {
-    it("returns incomplete status for ExceededContextWindowSizeError", async () => {
+    it("returns incomplete status with error for ExceededContextWindowSizeError", async () => {
       simulateRespondError(1, "Context window exceeded");
 
       const client = new OpenAI();
       const result = (await client.responses.create({ input: "test" })) as Response;
 
       expect(result.status).toBe("incomplete");
+      expect(result.error).toBeDefined();
+      expect(result.error!.code).toBe("max_output_tokens");
+      expect(result.error!.message).toContain("Context window exceeded");
       expect(result.incomplete_details).toEqual({ reason: "max_output_tokens" });
       client.close();
     });
@@ -735,13 +785,16 @@ describe("Responses API compat layer", () => {
       client.close();
     });
 
-    it("returns incomplete with content_filter for GuardrailViolationError", async () => {
+    it("returns failed with content_filter error for GuardrailViolationError", async () => {
       simulateRespondError(3, "Guardrail violation");
 
       const client = new OpenAI();
       const result = (await client.responses.create({ input: "test" })) as Response;
 
-      expect(result.status).toBe("incomplete");
+      expect(result.status).toBe("failed");
+      expect(result.error).toBeDefined();
+      expect(result.error!.code).toBe("content_filter");
+      expect(result.error!.message).toContain("Guardrail violation");
       expect(result.incomplete_details).toEqual({ reason: "content_filter" });
       expect(result.output).toEqual([]);
       client.close();
@@ -976,7 +1029,7 @@ describe("Responses API compat layer", () => {
   });
 
   describe("streaming — error handling", () => {
-    it("emits response.incomplete for ExceededContextWindowSizeError", async () => {
+    it("emits response.incomplete with error for ExceededContextWindowSizeError", async () => {
       simulateStreamError(1, "Context window exceeded");
 
       const client = new OpenAI();
@@ -994,6 +1047,9 @@ describe("Responses API compat layer", () => {
       expect(last.type).toBe("response.incomplete");
       if (last.type === "response.incomplete") {
         expect(last.response.status).toBe("incomplete");
+        expect(last.response.error).toBeDefined();
+        expect(last.response.error!.code).toBe("max_output_tokens");
+        expect(last.response.error!.message).toContain("Context window exceeded");
         expect(last.response.incomplete_details).toEqual({ reason: "max_output_tokens" });
       }
       client.close();
@@ -1042,7 +1098,7 @@ describe("Responses API compat layer", () => {
       client.close();
     });
 
-    it("emits response.incomplete with content_filter for GuardrailViolationError", async () => {
+    it("emits response.failed with content_filter error for GuardrailViolationError", async () => {
       simulateStreamError(3, "Guardrail violation");
 
       const client = new OpenAI();
@@ -1057,8 +1113,12 @@ describe("Responses API compat layer", () => {
       }
 
       const last = events[events.length - 1];
-      expect(last.type).toBe("response.incomplete");
-      if (last.type === "response.incomplete") {
+      expect(last.type).toBe("response.failed");
+      if (last.type === "response.failed") {
+        expect(last.response.status).toBe("failed");
+        expect(last.response.error).toBeDefined();
+        expect(last.response.error!.code).toBe("content_filter");
+        expect(last.response.error!.message).toContain("Guardrail violation");
         expect(last.response.incomplete_details).toEqual({ reason: "content_filter" });
       }
       client.close();

@@ -252,6 +252,13 @@ describe("OpenAI compat layer", () => {
       // SystemLanguageModel.dispose calls FMRelease on model pointer
       expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-model-pointer");
     });
+
+    it("supports Symbol.dispose", () => {
+      const client = new OpenAI();
+      expect(typeof client[Symbol.dispose]).toBe("function");
+      client[Symbol.dispose]();
+      expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-model-pointer");
+    });
   });
 
   describe("error handling — non-streaming", () => {
