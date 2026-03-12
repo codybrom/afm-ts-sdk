@@ -60,6 +60,7 @@ This SDK basically mirrors the Swift Foundation Models API (same class names, sa
 - [Structured Outputs](/guide/structured-output) — Typed generation with dictionary or JSON schemas
 - [Tools](/guide/tools) — Function calling
 - [Error Handling](/guide/error-handling) — Error types and recovery
+- [OpenAI Compatibility](/guide/openai-compatibility) — Drop-in OpenAI-compatible interface
 
 ## Building from Source
 

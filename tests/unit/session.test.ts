@@ -641,7 +641,7 @@ describe("LanguageModelSession", () => {
       );
 
       const session = new LanguageModelSession();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       for await (const _chunk of session.streamResponse("Hi", {
         options: { temperature: 0.8 },
       })) {
@@ -793,6 +793,15 @@ describe("LanguageModelSession", () => {
       });
       const cleanup = capturedSessionRegistryCallback();
       expect(() => cleanup!("bad-pointer")).not.toThrow();
+    });
+  });
+
+  describe("transcript getter guard", () => {
+    it("throws when transcript is accessed on uninitialized session", () => {
+      // Create session then null out internal transcript to test guard
+      const session = new LanguageModelSession();
+      (session as unknown as { _transcript: null })._transcript = null;
+      expect(() => session.transcript).toThrow("Session not initialized");
     });
   });
 });

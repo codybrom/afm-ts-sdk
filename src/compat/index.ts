@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { SystemLanguageModel } from "../core.js";
 import { LanguageModelSession } from "../session.js";
 import { Transcript } from "../transcript.js";
+import type { JsonSchema, JsonObject } from "../schema.js";
 import type { GenerationOptions } from "../options.js";
 import {
   ExceededContextWindowSizeError,
@@ -11,8 +12,14 @@ import {
 } from "../errors.js";
 import { messagesToTranscript } from "./transcript.js";
 import { mapParams } from "./params.js";
-import { buildToolInstructions, buildToolSchema, parseToolResponse } from "./tools.js";
+import {
+  buildToolInstructions,
+  buildToolSchema,
+  parseToolResponse,
+  type ToolModelOutput,
+} from "./tools.js";
 import { Stream } from "./stream.js";
+import { Responses } from "./responses.js";
 import type {
   ChatCompletionCreateParams,
   ChatCompletion,
@@ -21,7 +28,10 @@ import type {
 } from "./types.js";
 
 export { Stream } from "./stream.js";
+export { ResponseStream } from "./responses-stream.js";
+export { Responses } from "./responses.js";
 export * from "./types.js";
+export * from "./responses-types.js";
 
 export const MODEL_APPLE_INTELLIGENCE = "apple-intelligence";
 
@@ -37,7 +47,7 @@ interface TranscriptJson {
       role: string;
       id: string;
       contents: Array<{ type: string; text: string; id: string }>;
-      options?: Record<string, unknown>;
+      options?: JsonObject;
     }>;
   };
 }
@@ -51,7 +61,7 @@ function makeId(): string {
  * OpenAI returns keys in schema-defined order; Apple returns them in
  * generation order. This normalizes the output for compatibility.
  */
-function reorderJson(json: string, schema: Record<string, unknown>): string {
+function reorderJson(json: string, schema: JsonSchema): string {
   try {
     const obj = JSON.parse(json);
     return JSON.stringify(orderKeys(obj, schema));
@@ -60,14 +70,14 @@ function reorderJson(json: string, schema: Record<string, unknown>): string {
   }
 }
 
-function orderKeys(value: unknown, schema: Record<string, unknown>): unknown {
+function orderKeys(value: JsonObject[string], schema: JsonSchema): JsonObject[string] {
   if (value == null || typeof value !== "object" || Array.isArray(value)) return value;
 
-  const props = schema.properties as Record<string, Record<string, unknown>> | undefined;
+  const props = schema.properties as Record<string, JsonSchema> | undefined;
   if (!props) return value;
 
-  const obj = value as Record<string, unknown>;
-  const ordered: Record<string, unknown> = {};
+  const obj = value as JsonObject;
+  const ordered: JsonObject = {};
 
   // First, add keys in schema property order
   for (const key of Object.keys(props)) {
@@ -196,7 +206,7 @@ class Completions {
       if (tools && tools.length > 0) {
         const schema = buildToolSchema(tools);
         const content = await session.respondWithJsonSchema(prompt, schema, { options });
-        const parsed = JSON.parse(content.toJson()) as Record<string, unknown>;
+        const parsed = JSON.parse(content.toJson()) as ToolModelOutput;
         const result = parseToolResponse(parsed);
 
         if (result.type === "tool_call" && result.toolCall) {
@@ -209,7 +219,7 @@ class Completions {
       if (params.response_format?.type === "json_schema") {
         const rf = params.response_format as {
           type: "json_schema";
-          json_schema: { schema?: Record<string, unknown> };
+          json_schema: { schema?: JsonSchema };
         };
         const schema = rf.json_schema.schema ?? { type: "object" };
         const content = await session.respondWithJsonSchema(prompt, schema, { options });
@@ -232,7 +242,7 @@ class Completions {
               message: {
                 role: "assistant" as const,
                 content: null,
-                refusal: (err as Error).message,
+                refusal: err.message,
               },
               finish_reason: "stop" as const,
             },
@@ -240,7 +250,7 @@ class Completions {
         };
       }
       if (err instanceof RateLimitedError) {
-        throw new CompatError((err as Error).message, 429);
+        throw new CompatError(err.message, 429);
       }
       if (err instanceof GuardrailViolationError) {
         return buildCompletion(null, "content_filter");
@@ -269,7 +279,7 @@ class Completions {
         if (tools && tools.length > 0) {
           const schema = buildToolSchema(tools);
           const content = await session.respondWithJsonSchema(prompt, schema, { options });
-          const parsed = JSON.parse(content.toJson()) as Record<string, unknown>;
+          const parsed = JSON.parse(content.toJson()) as ToolModelOutput;
           const result = parseToolResponse(parsed);
 
           if (result.type === "tool_call" && result.toolCall) {
@@ -313,24 +323,22 @@ class Completions {
           return;
         }
         if (err instanceof RefusalError) {
-          yield makeChunk(id, created, { refusal: (err as Error).message }, null);
+          yield makeChunk(id, created, { refusal: err.message }, null);
           yield makeChunk(id, created, {}, "stop");
           return;
         }
         if (err instanceof RateLimitedError) {
-          throw new CompatError((err as Error).message, 429);
+          throw new CompatError(err.message, 429);
         }
         if (err instanceof GuardrailViolationError) {
           yield makeChunk(id, created, {}, "content_filter");
           return;
         }
         throw err;
-      } finally {
-        session.dispose();
       }
     }
 
-    return new Stream(generate());
+    return new Stream(generate(), () => session.dispose());
   }
 }
 
@@ -350,20 +358,22 @@ class Chat {
  * Drop-in replacement for the `openai` SDK's `OpenAI` class, backed by
  * Apple Foundation Models on-device inference.
  *
- * Supports `chat.completions.create()` with text, streaming, structured
- * output (`json_schema`), and tool calling. Each call is stateless:
- * the messages array is replayed into a native transcript, generation runs,
- * and the session is auto-disposed.
+ * Supports both `chat.completions.create()` (Chat Completions API) and
+ * `responses.create()` (Responses API) with text, streaming, structured
+ * output, and tool calling. Each call is stateless: the input is replayed
+ * into a native transcript, generation runs, and the session is auto-disposed.
  *
  * Call `close()` when done to release the underlying model.
  */
 export default class OpenAI {
   chat: Chat;
+  responses: Responses;
   private _model: SystemLanguageModel;
 
   constructor() {
     this._model = new SystemLanguageModel();
     this.chat = new Chat(() => this._model);
+    this.responses = new Responses(() => this._model);
   }
 
   close(): void {

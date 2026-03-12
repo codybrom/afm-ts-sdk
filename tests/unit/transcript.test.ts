@@ -5,7 +5,7 @@ const mockFns = createMockFunctions();
 const { mockDecodeAndFreeString } = vi.hoisted(() => ({
   mockDecodeAndFreeString: vi.fn((_pointer: unknown): string | null => {
     if (!_pointer) return null;
-    return '{"type":"transcript","entries":[]}';
+    return '{"type":"FoundationModels.Transcript","version":1,"transcript":{"entries":[]}}';
   }),
 }));
 
@@ -23,7 +23,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockDecodeAndFreeString.mockImplementation((pointer: unknown) => {
     if (!pointer) return null;
-    return '{"type":"transcript","entries":[]}';
+    return '{"type":"FoundationModels.Transcript","version":1,"transcript":{"entries":[]}}';
   });
 });
 
@@ -32,7 +32,9 @@ describe("Transcript", () => {
     it("returns JSON string from C API", () => {
       const transcript = new Transcript(mockPointer("mock-session"));
       const json = transcript.toJson();
-      expect(json).toBe('{"type":"transcript","entries":[]}');
+      expect(json).toBe(
+        '{"type":"FoundationModels.Transcript","version":1,"transcript":{"entries":[]}}',
+      );
       expect(mockFns.FMLanguageModelSessionGetTranscriptJSONString).toHaveBeenCalledWith(
         "mock-session",
         null,
@@ -51,7 +53,11 @@ describe("Transcript", () => {
     it("returns parsed JSON object", () => {
       const transcript = new Transcript(mockPointer("mock-session"));
       const dict = transcript.toDict();
-      expect(dict).toEqual({ type: "transcript", entries: [] });
+      expect(dict).toEqual({
+        type: "FoundationModels.Transcript",
+        version: 1,
+        transcript: { entries: [] },
+      });
     });
   });
 
@@ -88,24 +94,27 @@ describe("Transcript", () => {
   describe("entries", () => {
     it("returns typed entries from a simple transcript", () => {
       const json = JSON.stringify({
-        type: "transcript",
-        entries: [
-          {
-            id: "e1",
-            role: "instructions",
-            contents: [{ type: "text", text: "You are helpful.", id: "c1" }],
-          },
-          {
-            id: "e2",
-            role: "user",
-            contents: [{ type: "text", text: "Hello", id: "c2" }],
-          },
-          {
-            id: "e3",
-            role: "response",
-            contents: [{ type: "text", text: "Hi there!", id: "c3" }],
-          },
-        ],
+        type: "FoundationModels.Transcript",
+        version: 1,
+        transcript: {
+          entries: [
+            {
+              id: "e1",
+              role: "instructions",
+              contents: [{ type: "text", text: "You are helpful.", id: "c1" }],
+            },
+            {
+              id: "e2",
+              role: "user",
+              contents: [{ type: "text", text: "Hello", id: "c2" }],
+            },
+            {
+              id: "e3",
+              role: "response",
+              contents: [{ type: "text", text: "Hi there!", id: "c3" }],
+            },
+          ],
+        },
       });
       mockDecodeAndFreeString.mockReturnValueOnce(json);
       const transcript = new Transcript(mockPointer("mock-session"));
@@ -124,21 +133,24 @@ describe("Transcript", () => {
 
     it("returns entries with tool calls and tool output", () => {
       const json = JSON.stringify({
-        type: "transcript",
-        entries: [
-          {
-            id: "e1",
-            role: "response",
-            toolCalls: [{ id: "tc1", name: "get_weather", arguments: '{"city":"SF"}' }],
-          },
-          {
-            id: "e2",
-            role: "tool",
-            contents: [{ type: "text", text: '{"temp":72}', id: "c1" }],
-            toolName: "get_weather",
-            toolCallID: "tc1",
-          },
-        ],
+        type: "FoundationModels.Transcript",
+        version: 1,
+        transcript: {
+          entries: [
+            {
+              id: "e1",
+              role: "response",
+              toolCalls: [{ id: "tc1", name: "get_weather", arguments: '{"city":"SF"}' }],
+            },
+            {
+              id: "e2",
+              role: "tool",
+              contents: [{ type: "text", text: '{"temp":72}', id: "c1" }],
+              toolName: "get_weather",
+              toolCallID: "tc1",
+            },
+          ],
+        },
       });
       mockDecodeAndFreeString.mockReturnValueOnce(json);
       const transcript = new Transcript(mockPointer("mock-session"));
@@ -157,20 +169,23 @@ describe("Transcript", () => {
 
     it("returns entries with structured content", () => {
       const json = JSON.stringify({
-        type: "transcript",
-        entries: [
-          {
-            id: "e1",
-            role: "response",
-            contents: [
-              {
-                type: "structure",
-                id: "s1",
-                structure: { source: '{"name":"Ada"}', content: { name: "Ada" } },
-              },
-            ],
-          },
-        ],
+        type: "FoundationModels.Transcript",
+        version: 1,
+        transcript: {
+          entries: [
+            {
+              id: "e1",
+              role: "response",
+              contents: [
+                {
+                  type: "structure",
+                  id: "s1",
+                  structure: { source: '{"name":"Ada"}', content: { name: "Ada" } },
+                },
+              ],
+            },
+          ],
+        },
       });
       mockDecodeAndFreeString.mockReturnValueOnce(json);
       const transcript = new Transcript(mockPointer("mock-session"));
@@ -191,7 +206,9 @@ describe("Transcript", () => {
     });
 
     it("returns empty array when entries key is missing from JSON", () => {
-      mockDecodeAndFreeString.mockReturnValueOnce('{"type":"transcript"}');
+      mockDecodeAndFreeString.mockReturnValueOnce(
+        '{"type":"FoundationModels.Transcript","version":1,"transcript":{}}',
+      );
       const transcript = new Transcript(mockPointer("mock-session"));
       const entries = transcript.entries();
       expect(entries).toEqual([]);

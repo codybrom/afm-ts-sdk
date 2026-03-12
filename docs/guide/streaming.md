@@ -42,6 +42,26 @@ for await (const chunk of session.streamResponse("Explain TypeScript")) {
 console.log("\n\nFull response length:", full.length);
 ```
 
+## OpenAI-compatible Streaming
+
+If you prefer the OpenAI SDK's streaming interface, the [compat layer](/guide/openai-compatibility#streaming) provides `stream: true` with `ChatCompletionChunk` objects:
+
+```ts
+import OpenAI from "tsfm-sdk/openai";
+const client = new OpenAI();
+
+const stream = await client.chat.completions.create({
+  messages: [{ role: "user", content: "Tell me a joke" }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  const delta = chunk.choices[0].delta.content;
+  if (delta) process.stdout.write(delta);
+}
+client.close();
+```
+
 ## Cleanup
 
 The stream reference is released automatically when iteration completes or the session is disposed. The SDK keeps the Node.js event loop alive while streaming, so the process won't exit mid-stream.

@@ -1,6 +1,8 @@
 // OpenAI-compatible type definitions for the Apple Foundation Models compat layer.
 // This is a pure types file with no runtime code.
 
+import type { JsonSchema, JsonObject } from "../schema.js";
+
 // ---------------------------------------------------------------------------
 // Message types
 // ---------------------------------------------------------------------------
@@ -69,7 +71,7 @@ export type ChatCompletionTool = {
   function: {
     name: string;
     description?: string;
-    parameters?: Record<string, unknown>;
+    parameters?: JsonSchema;
     strict?: boolean | null;
   };
 };
@@ -86,7 +88,7 @@ export type ResponseFormat =
       json_schema: {
         name: string;
         description?: string;
-        schema?: Record<string, unknown>;
+        schema?: JsonSchema;
         strict?: boolean | null;
       };
     };
@@ -106,7 +108,8 @@ export type ChatCompletionCreateParams = {
   // Required
   messages: ChatCompletionMessageParam[];
 
-  // Supported params
+  // Supported params (model is optional here for convenience — OpenAI requires it,
+  // but this layer only supports one model so omitting it is safe)
   model?: string;
   temperature?: number | null;
   max_tokens?: number | null;
@@ -126,23 +129,25 @@ export type ChatCompletionCreateParams = {
   presence_penalty?: number | null;
   logit_bias?: Record<string, number> | null;
   parallel_tool_calls?: boolean;
-  tool_choice?: unknown;
+  tool_choice?: "none" | "auto" | "required" | { type: "function"; function: { name: string } };
   service_tier?: string | null;
   store?: boolean | null;
   metadata?: Record<string, string> | null;
-  prediction?: unknown;
+  prediction?: { type: "content"; content: string | Array<{ type: "text"; text: string }> };
   reasoning_effort?: string | null;
-  audio?: unknown;
+  audio?: { voice: string; format: string } | null;
   modalities?: string[] | null;
   user?: string;
   stream_options?: { include_usage?: boolean } | null;
   verbosity?: string | null;
-  web_search_options?: unknown;
+  web_search_options?: { search_context_size?: string; user_location?: JsonObject } | null;
   prompt_cache_key?: string;
   prompt_cache_retention?: string | null;
   safety_identifier?: string;
-  function_call?: unknown;
-  functions?: unknown[];
+  /** @deprecated Use `tools` and `tool_choice` instead. */
+  function_call?: "none" | "auto" | { name: string };
+  /** @deprecated Use `tools` instead. */
+  functions?: Array<{ name: string; description?: string; parameters?: JsonSchema }>;
 };
 
 // ---------------------------------------------------------------------------

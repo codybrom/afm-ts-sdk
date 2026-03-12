@@ -1,8 +1,30 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+type RegistryCallback = (cleanup: () => void) => void;
+
+const { getRegistryCallback } = vi.hoisted(() => {
+  let captured: RegistryCallback | null = null;
+
+  globalThis.FinalizationRegistry = class MockFinalizationRegistry {
+    constructor(callback: RegistryCallback) {
+      captured = callback;
+    }
+    register() {}
+    unregister() {}
+  } as unknown as typeof FinalizationRegistry;
+
+  return {
+    getRegistryCallback: () => captured,
+  };
+});
+
 import { Stream } from "../../../src/compat/stream.js";
 import type { ChatCompletionChunk } from "../../../src/compat/types.js";
 
-function makeChunk(content: string | null, finishReason: string | null = null): ChatCompletionChunk {
+function makeChunk(
+  content: string | null,
+  finishReason: string | null = null,
+): ChatCompletionChunk {
   return {
     id: "chatcmpl-test",
     object: "chat.completion.chunk",
@@ -12,7 +34,7 @@ function makeChunk(content: string | null, finishReason: string | null = null): 
       {
         index: 0,
         delta: content != null ? { content } : {},
-        finish_reason: finishReason as any,
+        finish_reason: finishReason as ChatCompletionChunk["choices"][0]["finish_reason"],
       },
     ],
     usage: null,
@@ -79,5 +101,84 @@ describe("Stream", () => {
     expect(results[0].choices[0].delta).toEqual({ content: "foo" });
     expect(results[1].choices[0].delta).toEqual({ content: "bar" });
     expect(results[2].choices[0].finish_reason).toBe("stop");
+  });
+
+  it("close() invokes the cleanup callback", () => {
+    const cleanup = vi.fn();
+    const stream = new Stream(makeSource([]), cleanup);
+    stream.close();
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("close() is idempotent", () => {
+    const cleanup = vi.fn();
+    const stream = new Stream(makeSource([]), cleanup);
+    stream.close();
+    stream.close();
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("break during iteration calls cleanup via return()", async () => {
+    const cleanup = vi.fn();
+    const chunks = [makeChunk("a"), makeChunk("b"), makeChunk("c")];
+    const stream = new Stream(makeSource(chunks), cleanup);
+
+    for await (const _chunk of stream) {
+      break;
+    }
+
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("error during iteration calls cleanup", async () => {
+    const cleanup = vi.fn();
+    async function* errorSource(): AsyncIterable<ChatCompletionChunk> {
+      yield makeChunk("a");
+      throw new Error("boom");
+    }
+    const stream = new Stream(errorSource(), cleanup);
+
+    await expect(async () => {
+      for await (const _chunk of stream) {
+        // consume
+      }
+    }).rejects.toThrow("boom");
+
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("break works when inner iterator has no return() method", async () => {
+    const cleanup = vi.fn();
+    // Create an async iterable whose iterator lacks a return() method
+    const source: AsyncIterable<ChatCompletionChunk> = {
+      [Symbol.asyncIterator]() {
+        let i = 0;
+        const chunks = [makeChunk("a"), makeChunk("b"), makeChunk("c")];
+        return {
+          async next() {
+            if (i < chunks.length) {
+              return { done: false as const, value: chunks[i++] };
+            }
+            return { done: true as const, value: undefined as unknown as ChatCompletionChunk };
+          },
+          // Intentionally no return() method
+        };
+      },
+    };
+    const stream = new Stream(source, cleanup);
+
+    for await (const _chunk of stream) {
+      break;
+    }
+
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("FinalizationRegistry callback invokes the cleanup function", () => {
+    const registryCallback = getRegistryCallback();
+    expect(registryCallback).toBeTypeOf("function");
+    const cleanup = vi.fn();
+    registryCallback!(cleanup);
+    expect(cleanup).toHaveBeenCalledOnce();
   });
 });

@@ -57,8 +57,8 @@ export function mapParams(params: ChatCompletionCreateParams): GenerationOptions
   }
 
   // Build sampling mode from top_p and/or seed
-  const topP = params.top_p != null ? params.top_p : undefined;
-  const seed = params.seed != null ? params.seed : undefined;
+  const topP = params.top_p ?? undefined;
+  const seed = params.seed ?? undefined;
 
   if (topP !== undefined || seed !== undefined) {
     options.sampling = SamplingMode.random({

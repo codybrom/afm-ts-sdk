@@ -840,5 +840,20 @@ describe("OpenAI compat layer", () => {
       }).rejects.toThrow("Assets unavailable");
       client.close();
     });
+
+    it("stream.close() disposes the session", async () => {
+      simulateStreamSuccess(["Hi"]);
+
+      const client = new OpenAI();
+      const stream = await client.chat.completions.create({
+        messages: basicMessages,
+        stream: true,
+      });
+
+      mockFns.FMRelease.mockClear();
+      stream.close();
+      expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-session-pointer");
+      client.close();
+    });
   });
 });

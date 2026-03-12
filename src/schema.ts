@@ -10,6 +10,18 @@ import { statusToError } from "./errors.js";
 
 export type PropertyType = "string" | "integer" | "number" | "boolean" | "array" | "object";
 
+type JsonPrimitive = string | number | boolean | null | undefined;
+
+/** A JSON Schema definition object. */
+export type JsonSchema = {
+  [key: string]: JsonSchema | JsonSchema[] | JsonPrimitive | JsonPrimitive[];
+};
+
+/** An arbitrary parsed JSON object. */
+export type JsonObject = {
+  [key: string]: JsonObject | JsonObject[] | JsonPrimitive | JsonPrimitive[];
+};
+
 // ---------------------------------------------------------------------------
 // GuideType — mirrors Python's GuideType enum
 // ---------------------------------------------------------------------------
@@ -221,7 +233,7 @@ export class GenerationSchema {
   }
 
   /** Serialize the schema to a plain object (mirrors Python's GenerationSchema.to_dict()). */
-  toDict(): Record<string, unknown> {
+  toDict(): JsonSchema {
     const errorCode = [0];
     const pointer = getFunctions().FMGenerationSchemaGetJSONString(
       this._nativeSchema,
@@ -248,16 +260,13 @@ export class GenerationSchema {
  *
  * @internal
  */
-export function afmSchemaFormat(
-  schema: Record<string, unknown>,
-  isRoot = true,
-): Record<string, unknown> {
-  const result: Record<string, unknown> = { ...schema };
+export function afmSchemaFormat(schema: JsonSchema, isRoot = true): JsonSchema {
+  const result: JsonSchema = { ...schema };
 
   // Recurse into $defs entries (Apple uses $defs/$ref for nested objects)
   if (result.$defs && typeof result.$defs === "object") {
-    const defs = result.$defs as Record<string, Record<string, unknown>>;
-    const normalized: Record<string, Record<string, unknown>> = {};
+    const defs = result.$defs as Record<string, JsonSchema>;
+    const normalized: Record<string, JsonSchema> = {};
     for (const [key, value] of Object.entries(defs)) {
       normalized[key] = value && typeof value === "object" ? afmSchemaFormat(value, false) : value;
     }
@@ -266,8 +275,8 @@ export function afmSchemaFormat(
 
   // Recurse into properties (skip $ref properties — they reference $defs)
   if (result.properties && typeof result.properties === "object") {
-    const props = result.properties as Record<string, Record<string, unknown>>;
-    const normalized: Record<string, Record<string, unknown>> = {};
+    const props = result.properties as Record<string, JsonSchema>;
+    const normalized: Record<string, JsonSchema> = {};
     for (const [key, value] of Object.entries(props)) {
       if (value && typeof value === "object" && "$ref" in value) {
         normalized[key] = value;
@@ -277,6 +286,15 @@ export function afmSchemaFormat(
       }
     }
     result.properties = normalized;
+  }
+
+  // Recurse into array items (e.g. { type: "array", items: { type: "object", ... } })
+  if (
+    result.items &&
+    typeof result.items === "object" &&
+    !("$ref" in (result.items as JsonSchema))
+  ) {
+    result.items = afmSchemaFormat(result.items as JsonSchema, false);
   }
 
   // Apple requires every object to have title, properties, required, additionalProperties, and x-order
@@ -304,7 +322,7 @@ export class GeneratedContent {
   /** @internal */
   _nativeContent: NativePointer;
 
-  private _parsed: Record<string, unknown> | null = null;
+  private _parsed: JsonObject | null = null;
 
   /** @internal */
   constructor(pointer: NativePointer) {
@@ -331,7 +349,7 @@ export class GeneratedContent {
   }
 
   /** Returns the parsed JSON object. */
-  toObject(): Record<string, unknown> {
+  toObject(): JsonObject {
     if (!this._parsed) {
       this._parsed = JSON.parse(this.toJson());
     }

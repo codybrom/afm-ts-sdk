@@ -22,3 +22,4 @@ Requires macOS 26+ with Apple Intelligence enabled.
 | [Generation Options](/examples/generation-options) | Temperature, sampling, token limits |
 | [Transcripts](/examples/transcript) | Session history persistence |
 | [Content Tagging](/examples/content-tagging) | Content tagging use case |
+| [OpenAI Compatibility](/examples/openai-compat) | Drop-in OpenAI-compatible interface |

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { JsonObject } from "../schema.js";
 import type { ChatCompletionMessageParam, ChatCompletionMessageToolCall } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -25,7 +26,7 @@ interface TranscriptContentItem {
 interface TranscriptEntry {
   role: "instructions" | "user" | "response";
   id: string;
-  options?: Record<string, unknown>;
+  options?: JsonObject;
   contents: TranscriptContentItem[];
 }
 

@@ -29,4 +29,7 @@ features:
   - icon: 🛠️
     title: Tool Calling
     details: Give the model tools to call during generation. Define schemas, implement handlers, get structured results.
+  - icon: 🔄
+    title: OpenAI Compatible
+    details: Drop-in replacement for the OpenAI SDK. Same messages, same responses, same streaming — backed by on-device inference.
 ---

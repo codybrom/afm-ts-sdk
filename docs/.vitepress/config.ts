@@ -57,6 +57,15 @@ export default defineConfig({
             { text: "Error Handling", link: "/guide/error-handling" },
           ],
         },
+        {
+          text: "Integrations",
+          items: [
+            {
+              text: "OpenAI Compatibility",
+              link: "/guide/openai-compatibility",
+            },
+          ],
+        },
       ],
       "/api/": [
         {
@@ -70,6 +79,7 @@ export default defineConfig({
             { text: "Tool", link: "/api/tool" },
             { text: "Transcript", link: "/api/transcript" },
             { text: "Errors", link: "/api/errors" },
+            { text: "OpenAI Compatibility", link: "/api/openai-compat" },
           ],
         },
       ],
@@ -86,6 +96,10 @@ export default defineConfig({
             { text: "Generation Options", link: "/examples/generation-options" },
             { text: "Transcripts", link: "/examples/transcript" },
             { text: "Content Tagging", link: "/examples/content-tagging" },
+            {
+              text: "OpenAI Compatibility",
+              link: "/examples/openai-compat",
+            },
           ],
         },
       ],

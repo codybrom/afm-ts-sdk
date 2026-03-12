@@ -25,6 +25,8 @@ export {
   GuideType,
   GeneratedContent,
   type PropertyType,
+  type JsonSchema,
+  type JsonObject,
 } from "./schema.js";
 
 export { SamplingMode, type SamplingModeType, type GenerationOptions } from "./options.js";

@@ -119,3 +119,7 @@ Both methods produce the same constrained output. The difference is the schema f
 
 - **respondWithJsonSchema** takes a standard JSON Schema object. The SDK converts it to the model's dictionary format at runtime. Standard constraints like `enum`, `minimum`/`maximum`, and `pattern` all work, but the model's more specific generation guides aren't available if you pass a JSON Schema.
   - Use this when you already have existing JSON schemas or don't need the extra constraints possible with generation guides.
+
+::: tip
+The [OpenAI compatibility layer](/guide/openai-compatibility#structured-output) also supports structured output via `response_format: { type: "json_schema" }`, using the same JSON Schema format as the OpenAI API.
+:::

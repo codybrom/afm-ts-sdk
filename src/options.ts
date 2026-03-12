@@ -44,10 +44,23 @@ export interface GenerationOptions {
   maximumResponseTokens?: number;
 }
 
+interface SerializedSampling {
+  mode: string;
+  top_k?: number;
+  top_p?: number;
+  seed?: number;
+}
+
+interface SerializedOptions {
+  temperature?: number;
+  maximum_response_tokens?: number;
+  sampling?: SerializedSampling | { mode: "greedy" };
+}
+
 export function serializeOptions(options: GenerationOptions | undefined): string | null {
   if (!options) return null;
 
-  const obj: Record<string, unknown> = {};
+  const obj: SerializedOptions = {};
 
   if (options.temperature !== undefined) obj.temperature = options.temperature;
   if (options.maximumResponseTokens !== undefined) {
@@ -59,7 +72,7 @@ export function serializeOptions(options: GenerationOptions | undefined): string
     if (sampling.type === "greedy") {
       obj.sampling = { mode: "greedy" };
     } else {
-      const r: Record<string, unknown> = { mode: "random" };
+      const r: SerializedSampling = { mode: "random" };
       // Key names aligned with Python SDK: top_k, top_p
       if (sampling.top !== undefined) r.top_k = sampling.top;
       if (sampling.probabilityThreshold !== undefined) r.top_p = sampling.probabilityThreshold;

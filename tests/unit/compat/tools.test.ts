@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   buildToolInstructions,
   buildToolSchema,
@@ -166,6 +166,37 @@ describe("buildToolSchema", () => {
     expect(argsDef.type).toBe("object");
     expect(Object.keys(argsDef.properties as object)).toHaveLength(0);
   });
+
+  it("warns when multiple tools define the same property name", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tools: ChatCompletionTool[] = [
+      {
+        type: "function",
+        function: {
+          name: "tool_a",
+          parameters: {
+            type: "object",
+            properties: { query: { type: "string" } },
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "tool_b",
+          parameters: {
+            type: "object",
+            properties: { query: { type: "integer" } },
+          },
+        },
+      },
+    ];
+    buildToolSchema(tools);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Tool parameter "query" is defined by both "tool_a" and "tool_b"'),
+    );
+    warnSpy.mockRestore();
+  });
 });
 
 describe("parseToolResponse", () => {
@@ -223,10 +254,13 @@ describe("parseToolResponse", () => {
     expect(result.toolCall!.function.arguments).toBe("{}");
   });
 
-  it("falls back to text when type is tool_call but tool_call is missing", () => {
+  it("falls back to text with warning when type is tool_call but tool_call is missing", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const result = parseToolResponse({ type: "tool_call" });
     expect(result.type).toBe("text");
     expect(result.content).toBe("");
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("tool_call field is missing"));
+    warnSpy.mockRestore();
   });
 
   it("falls back to text for unknown type", () => {

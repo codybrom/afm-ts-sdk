@@ -170,6 +170,46 @@ describe("afmSchemaFormat", () => {
     // Should NOT have title, additionalProperties, etc. added
     expect(props.nested.title).toBeUndefined();
   });
+
+  it("recursively normalizes array items with nested objects", () => {
+    const result = afmSchemaFormat({
+      type: "object",
+      properties: {
+        people: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              age: { type: "integer" },
+            },
+          },
+        },
+      },
+    });
+    const props = result.properties as Record<string, Record<string, unknown>>;
+    const items = props.people.items as Record<string, unknown>;
+    expect(items.title).toBe("Object");
+    expect(items.required).toEqual([]);
+    expect(items.additionalProperties).toBe(false);
+    expect(items["x-order"]).toEqual(["name", "age"]);
+  });
+
+  it("skips array items with $ref", () => {
+    const result = afmSchemaFormat({
+      type: "object",
+      properties: {
+        people: {
+          type: "array",
+          items: { $ref: "#/$defs/Person" },
+        },
+      },
+    });
+    const props = result.properties as Record<string, Record<string, unknown>>;
+    const items = props.people.items as Record<string, unknown>;
+    expect(items.$ref).toBe("#/$defs/Person");
+    expect(items.title).toBeUndefined();
+  });
 });
 
 describe("GenerationGuide", () => {

@@ -1,10 +1,17 @@
 import { randomUUID } from "node:crypto";
+import type { JsonSchema } from "../schema.js";
 import type { ChatCompletionTool, ChatCompletionMessageToolCall } from "./types.js";
 
 export interface ToolParseResult {
   type: "text" | "tool_call";
   content?: string;
   toolCall?: ChatCompletionMessageToolCall;
+}
+
+export interface ToolModelOutput {
+  type: string;
+  tool_call?: { name: string; arguments?: JsonSchema };
+  content?: string;
 }
 
 /**
@@ -40,18 +47,32 @@ export function buildToolInstructions(tools: ChatCompletionTool[]): string {
 /**
  * Builds a JSON schema for structured output that discriminates between
  * a text response and a tool call.
+ *
+ * Each tool's parameters are namespaced under a per-tool `$defs` entry
+ * to avoid property name collisions when multiple tools define parameters
+ * with the same name but different types or meanings.
  */
-export function buildToolSchema(tools: ChatCompletionTool[]): Record<string, unknown> {
+export function buildToolSchema(tools: ChatCompletionTool[]): JsonSchema {
   const toolNames = tools.map((t) => t.function.name);
 
   // Build a merged arguments schema from all tools' parameters.
   // Foundation Models requires fully specified schemas — no open-ended objects.
-  const mergedProperties: Record<string, unknown> = {};
+  // Warn when multiple tools define the same property name — the last one wins.
+  const mergedProperties: Record<string, JsonSchema> = {};
+  const seenPropertySources = new Map<string, string>();
   for (const tool of tools) {
     const params = tool.function.parameters;
     if (params && typeof params === "object" && params.properties) {
-      const props = params.properties as Record<string, unknown>;
+      const props = params.properties as Record<string, JsonSchema>;
       for (const [key, value] of Object.entries(props)) {
+        const prev = seenPropertySources.get(key);
+        if (prev !== undefined) {
+          console.warn(
+            `[tsfm compat] Tool parameter "${key}" is defined by both "${prev}" and "${tool.function.name}". ` +
+              `The schema from "${tool.function.name}" will be used. This may cause incorrect tool arguments.`,
+          );
+        }
+        seenPropertySources.set(key, tool.function.name);
         mergedProperties[key] = value;
       }
     }
@@ -112,11 +133,17 @@ export function buildToolSchema(tools: ChatCompletionTool[]): Record<string, unk
 /**
  * Parses the model's structured output into a ToolParseResult.
  */
-export function parseToolResponse(parsed: Record<string, unknown>): ToolParseResult {
-  if (parsed.type === "tool_call" && parsed.tool_call != null) {
-    const toolCall = parsed.tool_call as Record<string, unknown>;
-    const name = toolCall.name as string;
-    const args = toolCall.arguments ?? {};
+export function parseToolResponse(parsed: ToolModelOutput): ToolParseResult {
+  if (parsed.type === "tool_call") {
+    if (parsed.tool_call == null) {
+      console.warn(
+        `[tsfm compat] Model generated type "tool_call" but the tool_call field is missing. ` +
+          `Falling back to an empty text response.`,
+      );
+      return { type: "text", content: "" };
+    }
+
+    const { name, arguments: args = {} } = parsed.tool_call;
 
     return {
       type: "tool_call",
