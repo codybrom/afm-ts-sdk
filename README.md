@@ -22,6 +22,7 @@
 - Structured output with typed schemas and generation guides
 - Tool calling
 - Transcript persistence
+- Chat-style and Responses-style APIs via `tsfm-sdk/chat`
 
 ## Quick Start
 
@@ -56,6 +57,7 @@ model.dispose();
 - [Streaming](https://tsfm.dev/guide/streaming) — token-by-token response streaming
 - [Structured Output](https://tsfm.dev/guide/structured-output) — typed schemas with generation guides
 - [Tools](https://tsfm.dev/guide/tools) — function calling
+- [Chat & Responses APIs](https://tsfm.dev/guide/chat-api) — familiar Chat-style and Responses-style interfaces
 - [API Reference](https://tsfm.dev/api/) — complete API docs
 - [Examples](https://tsfm.dev/examples/) — runnable code for every feature
 
