@@ -37,37 +37,35 @@ onMounted(async () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   el.appendChild(renderer.domElement);
 
-  // --- Node positions ---
-  const s = 0.7;
-  const d = 0.7;
-  const positions: [number, number, number][] = [
-    [0, 1.0, 0], //  0  top
-    [-s, 0.4, d], //  1  upper-left  front
-    [-s, 0.4, -d], //  2  upper-left  back
-    [s, 0.4, d], //  3  upper-right front
-    [s, 0.4, -d], //  4  upper-right back
-    [0, 0, 0], //  5  center
-    [-s, -0.4, d], //  6  lower-left  front
-    [-s, -0.4, -d], //  7  lower-left  back
-    [s, -0.4, d], //  8  lower-right front
-    [s, -0.4, -d], //  9  lower-right back
-    [0, -1.0, 0], // 10  bottom
-  ];
+  // --- Lattice shape ---
+  const S = 0.7;
+  const top = [0, 1, 0], bot = [0, -1, 0], mid = [0, 0, 0];
+  const ulf = [-S, .4, S], ulb = [-S, .4, -S]; // upper-left  front/back
+  const urf = [S, .4, S], urb = [S, .4, -S]; //  upper-right front/back
+  const llf = [-S, -.4, S], llb = [-S, -.4, -S]; // lower-left  front/back
+  const lrf = [S, -.4, S], lrb = [S, -.4, -S]; //  lower-right front/back
 
-  // --- Edges ---
-  const edges: [number, number][] = [
-    [0, 1], [0, 2], [0, 3], [0, 4],
-    [1, 3], [2, 4],
-    [1, 5], [2, 5], [3, 5], [4, 5],
-    [0, 5],
-    [1, 8], [2, 9], [3, 6], [4, 7],
-    [1, 6], [2, 7], [3, 8], [4, 9],
-    [6, 8], [7, 9],
-    [5, 6], [5, 7], [5, 8], [5, 9],
-    [10, 5],
-    [6, 10], [7, 10], [8, 10], [9, 10],
-    [1, 2], [3, 4], [6, 7], [8, 9],
-  ];
+  const allNodes = [top, ulf, ulb, urf, urb, mid, llf, llb, lrf, lrb, bot];
+
+  // Each pair of entries = one line segment
+  type P = number[];
+  const seg = (...pairs: [P, P][]) => pairs.flatMap(([a, b]) => [...a, ...b]);
+  const linePoints = seg(
+    // top/bottom spokes
+    [top, ulf], [top, ulb], [top, urf], [top, urb], [top, mid],
+    [bot, llf], [bot, llb], [bot, lrf], [bot, lrb], [bot, mid],
+    // center spokes
+    [mid, ulf], [mid, ulb], [mid, urf], [mid, urb],
+    [mid, llf], [mid, llb], [mid, lrf], [mid, lrb],
+    // front face
+    [ulf, urf], [urf, lrf], [lrf, llf], [llf, ulf], [ulf, lrf], [urf, llf],
+    // back face
+    [ulb, urb], [urb, lrb], [lrb, llb], [llb, ulb], [ulb, lrb], [urb, llb],
+    // left face
+    [ulf, ulb], [ulb, llb], [llb, llf], [llf, ulf], [ulf, llb], [ulb, llf],
+    // right face
+    [urf, urb], [urb, lrb], [lrb, lrf], [lrf, urf], [urf, lrb], [urb, lrf],
+  );
 
   const group = new THREE.Group();
   scene.add(group);
@@ -76,16 +74,10 @@ onMounted(async () => {
   const sphereGeo = new THREE.SphereGeometry(0.08, 12, 8);
   const nodeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-  for (const [x, y, z] of positions) {
+  for (const [x, y, z] of allNodes) {
     const mesh = new THREE.Mesh(sphereGeo, nodeMat);
     mesh.position.set(x, y, z);
     group.add(mesh);
-  }
-
-  // --- Fat line edges (screen-space pixel width) ---
-  const linePoints: number[] = [];
-  for (const [a, b] of edges) {
-    linePoints.push(...positions[a], ...positions[b]);
   }
   const lineGeo = new LineSegmentsGeometry();
   lineGeo.setPositions(linePoints);
