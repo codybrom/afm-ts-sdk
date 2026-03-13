@@ -56,7 +56,7 @@ function _installExitHandler(): void {
   }
 }
 
-type ResponseCbArgs = [status: number, content: string, _length: number, userInfo: unknown];
+type ResponseCbArgs = [status: number, content: string | null, _length: number, userInfo: unknown];
 type StructuredCbArgs = [status: number, contentRef: NativePointer, userInfo: unknown];
 
 export class LanguageModelSession {
@@ -278,12 +278,14 @@ export class LanguageModelSession {
         clearInterval(keepAlive);
         unregisterCallback(callback);
       } else if (!content) {
-        // null content = end-of-stream signal
+        // null/empty content = end-of-stream signal
         queue.push({ done: true });
         streamDone = true;
         clearInterval(keepAlive);
         unregisterCallback(callback);
-      } else {
+      } else if (content !== "null") {
+        // Skip "null" string artifacts from koffi coercing null C string
+        // pointers during intermediate tool-call snapshots.
         queue.push({ content });
       }
       const notify = notifyConsumer;
