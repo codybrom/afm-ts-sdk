@@ -86,7 +86,7 @@ Issues and PRs welcome. If something doesn't work on your machine or you find a 
 
 © 2026 Cody Bromley and contributors.
 
-TSDM is licensed under the Apache 2.0 license.For complete licensing information, see this project's [LICENSE file](LICENSE.md).
+TSDM is licensed under the Apache 2.0 license. For complete licensing information, see this project's [LICENSE file](LICENSE.md).
 
 The `tsfm-sdk` package available from NPM contains precompiled C bindings and libraries for working with macOS 26 Foundation Models adapted from [python-apple-fm-sdk](https://github.com/apple/python-apple-fm-sdk) which is Copyright Apple Inc. and licensed under the Apache 2.0 license.
 
