@@ -293,12 +293,17 @@ export class LanguageModelSession {
     let streamDone = false;
     const keepAlive = setInterval(() => {}, 10000);
 
+    // let streamCallbackCount = 0;
     const callback = koffi.register((...args: ResponseCbArgs) => {
       const [status, content] = args;
+      // streamCallbackCount++;
       // koffi delivers the void* as a usable JS value; calling koffi.decode()
       // inside a callback context triggers N-API exceptions, so we use the
       // value directly. The void* proto prevents koffi's null→"null" coercion.
       const text = content as unknown as string | null;
+      // console.debug(
+      //   `[tsfm] Stream callback #${streamCallbackCount}: status=${status} text=${text ? `"${text.slice(0, 80)}..."` : text}`,
+      // );
       if (status !== 0) {
         queue.push({ done: true, error: statusToError(status, text) });
         streamDone = true;
@@ -306,6 +311,7 @@ export class LanguageModelSession {
         unregisterCallback(callback);
       } else if (!text) {
         // null/empty content = end-of-stream signal
+        // console.debug("[tsfm] Stream: end-of-stream (null content)");
         queue.push({ done: true });
         streamDone = true;
         clearInterval(keepAlive);
@@ -314,6 +320,8 @@ export class LanguageModelSession {
         // Skip "null" string artifacts from koffi coercing null C string
         // pointers during intermediate tool-call snapshots.
         queue.push({ content: text });
+      } else {
+        // console.debug('[tsfm] Stream: skipped "null" artifact');
       }
       const notify = notifyConsumer;
       notifyConsumer = null;
