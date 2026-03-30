@@ -20,10 +20,14 @@ const _toolRegistry = new FinalizationRegistry(
   ({ pointer, callback }: { pointer: NativePointer; callback: KoffiCallback }) => {
     try {
       unregisterCallback(callback);
-    } catch {}
+    } catch (err) {
+      console.warn("[tsfm] Tool callback cleanup via FinalizationRegistry failed:", err);
+    }
     try {
       getFunctions().FMRelease(pointer);
-    } catch {}
+    } catch (err) {
+      console.warn("[tsfm] Tool pointer cleanup via FinalizationRegistry failed:", err);
+    }
   },
 );
 
@@ -86,28 +90,20 @@ export abstract class Tool {
     // it stays registered for the full lifetime of the tool because the model
     // may invoke this tool multiple times within a single session.
     this._callback = koffi.register((contentRef: NativePointer, callId: number) => {
-      // console.debug(`[tsfm] Tool callback fired: ${this.name} callId=${callId}`);
       try {
         const content = new GeneratedContent(contentRef);
-        // console.debug(`[tsfm] Tool ${this.name}: GeneratedContent created`);
         // Fire onCall notification — informational only, must not block the
         // tool call even if it throws (e.g. N-API issues in Electron).
         try {
           this.onCall?.(this.name, content.toObject() as Record<string, unknown>);
-        } catch {
-          // onCall is best-effort; swallow errors
+        } catch (err) {
+          console.warn(`[tsfm] Tool '${this.name}' onCall handler threw:`, err);
         }
-        // console.debug(`[tsfm] Tool ${this.name}: calling this.call()`);
         this.call(content)
           .then((result) => {
-            // console.debug(
-            //   `[tsfm] Tool ${this.name}: call() resolved (${result.length} chars), calling FMBridgedToolFinishCall`,
-            // );
             fn.FMBridgedToolFinishCall(this._nativeTool, callId, result);
-            // console.debug(`[tsfm] Tool ${this.name}: FMBridgedToolFinishCall returned`);
           })
           .catch((err: unknown) => {
-            // console.debug(`[tsfm] Tool ${this.name}: call() rejected:`, err);
             const cause = err instanceof Error ? err : new Error(String(err));
             const toolErr = new ToolCallError(this.name, cause);
             fn.FMBridgedToolFinishCall(this._nativeTool, callId, toolErr.message);
@@ -115,7 +111,6 @@ export abstract class Tool {
       } catch (err: unknown) {
         // If anything throws synchronously (e.g. GeneratedContent construction),
         // we must still finish the call or the session hangs forever.
-        // console.debug(`[tsfm] Tool ${this.name}: sync error in callback:`, err);
         const msg = err instanceof Error ? err.message : String(err);
         fn.FMBridgedToolFinishCall(this._nativeTool, callId, `Tool callback error: ${msg}`);
       }

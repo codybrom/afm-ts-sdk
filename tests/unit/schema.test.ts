@@ -426,6 +426,24 @@ describe("GenerationSchema", () => {
     expect(schema._nativeSchema).toBe("mock-schema-pointer");
   });
 
+  it("property() accepts compound array type names", () => {
+    const schema = new GenerationSchema("Test");
+    schema.property("tags", "array<string>");
+    expect(mockFns.FMGenerationSchemaPropertyCreate).toHaveBeenCalledWith(
+      "tags",
+      null,
+      "array<string>",
+      false,
+    );
+  });
+
+  it("property() rejects bare 'array' type", () => {
+    const schema = new GenerationSchema("Test");
+    expect(() => schema.property("items", "array")).toThrow(
+      'Bare "array" type is not supported by the C bridge',
+    );
+  });
+
   it("addReferenceSchema calls FFI", () => {
     const schema = new GenerationSchema("Main");
     const ref = new GenerationSchema("Ref");
@@ -548,6 +566,54 @@ describe("GeneratedContent", () => {
       "Property 'nonexistent' not found in generated content",
     );
   });
+
+  describe("dispose", () => {
+    it("releases native pointer", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      content.dispose();
+      expect(mockFns.FMRelease).toHaveBeenCalledWith("mock-content");
+      expect(content._nativeContent).toBeNull();
+    });
+
+    it("is safe to call twice", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      content.dispose();
+      content.dispose();
+      expect(mockFns.FMRelease).toHaveBeenCalledTimes(1);
+    });
+
+    it("Symbol.dispose delegates to dispose", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      content[Symbol.dispose]();
+      expect(content._nativeContent).toBeNull();
+    });
+
+    it("toJson throws after dispose", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      content.dispose();
+      expect(() => content.toJson()).toThrow("GeneratedContent has been disposed");
+    });
+
+    it("isComplete throws after dispose", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      content.dispose();
+      expect(() => content.isComplete).toThrow("GeneratedContent has been disposed");
+    });
+
+    it("value throws after dispose", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      content.dispose();
+      expect(() => content.value("name")).toThrow("GeneratedContent has been disposed");
+    });
+
+    it("toObject returns cached value after dispose", () => {
+      const content = new GeneratedContent(mockPointer("mock-content"));
+      const obj = content.toObject(); // caches the result
+      content.dispose();
+      // toObject uses cache, does not hit native
+      expect(content.toObject()).toBe(obj);
+    });
+  });
 });
 
 describe("generable", () => {
@@ -664,7 +730,7 @@ describe("generable", () => {
     expect(mockFns.FMGenerationSchemaPropertyCreate).toHaveBeenCalledWith(
       "items",
       null,
-      "array",
+      "array<items>",
       false,
     );
   });
@@ -679,7 +745,7 @@ describe("generable", () => {
     expect(mockFns.FMGenerationSchemaPropertyCreate).toHaveBeenCalledWith(
       "tags",
       null,
-      "array",
+      "array<string>",
       false,
     );
   });

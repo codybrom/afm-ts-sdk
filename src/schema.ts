@@ -10,6 +10,12 @@ import { statusToError } from "./errors.js";
 
 export type PropertyType = "string" | "integer" | "number" | "boolean" | "array" | "object";
 
+/**
+ * Compound type names used by the C bridge. Includes scalar types plus
+ * array variants like `"array<string>"`, `"array<integer>"`, etc.
+ */
+export type NativeTypeName = PropertyType | `array<${string}>`;
+
 type JsonPrimitive = string | number | boolean | null | undefined;
 
 /** A JSON Schema definition object. */
@@ -174,7 +180,7 @@ export class GenerationSchemaProperty {
 
   constructor(
     name: string,
-    type: PropertyType,
+    type: NativeTypeName,
     opts: {
       description?: string;
       optional?: boolean;
@@ -221,13 +227,20 @@ export class GenerationSchema {
   /** Convenience: add a typed property inline. */
   property(
     name: string,
-    type: PropertyType,
+    type: NativeTypeName,
     opts?: {
       description?: string;
       optional?: boolean;
       guides?: GenerationGuide[];
     },
   ): this {
+    if (type === "array") {
+      throw new Error(
+        `Bare "array" type is not supported by the C bridge. ` +
+          `Use a compound type like "array<string>" or "array<integer>", ` +
+          `or use generable() for automatic type resolution.`,
+      );
+    }
     const prop = new GenerationSchemaProperty(name, type, opts);
     return this.addProperty(prop);
   }
@@ -324,6 +337,12 @@ export interface Generable<T extends Record<string, PropertyDef>> {
   parse(content: GeneratedContent): InferSchema<T>;
 }
 
+/** Map a scalar PropertyDef type to the C bridge type name (matches Python SDK convention). */
+function arrayElementTypeName(def: PropertyDef): string {
+  if (def.type === "object") return def.type; // resolved via reference schema
+  return def.type; // "string" | "integer" | "number" | "boolean"
+}
+
 /** Recursively adds a property definition to a GenerationSchema. */
 function addPropertyDef(schema: GenerationSchema, name: string, def: PropertyDef): void {
   if (def.type === "object") {
@@ -332,24 +351,34 @@ function addPropertyDef(schema: GenerationSchema, name: string, def: PropertyDef
       addPropertyDef(nested, key, nestedDef);
     }
     schema.addReferenceSchema(nested);
-    schema.property(name, "object", { optional: def.optional });
-  } else if (def.type === "array" && def.items.type === "object") {
-    const itemSchema = new GenerationSchema(name, def.items.description);
-    for (const [key, nestedDef] of Object.entries(def.items.properties)) {
-      addPropertyDef(itemSchema, key, nestedDef);
+    schema.addProperty(new GenerationSchemaProperty(name, "object", { optional: def.optional }));
+  } else if (def.type === "array") {
+    // Build compound type name like "array<string>" or "array<Name>" to match
+    // the convention expected by Apple's C bridge (see python-apple-fm-sdk).
+    const elementType = arrayElementTypeName(def.items);
+    const typeName: NativeTypeName = `array<${elementType === "object" ? name : elementType}>`;
+    if (def.items.type === "object") {
+      const itemSchema = new GenerationSchema(name, def.items.description);
+      for (const [key, nestedDef] of Object.entries(def.items.properties)) {
+        addPropertyDef(itemSchema, key, nestedDef);
+      }
+      schema.addReferenceSchema(itemSchema);
     }
-    schema.addReferenceSchema(itemSchema);
-    schema.property(name, "array", {
-      description: def.description,
-      optional: def.optional,
-      guides: def.guides,
-    });
+    schema.addProperty(
+      new GenerationSchemaProperty(name, typeName, {
+        description: def.description,
+        optional: def.optional,
+        guides: def.guides,
+      }),
+    );
   } else {
-    schema.property(name, def.type, {
-      description: def.description,
-      optional: def.optional,
-      guides: "guides" in def ? def.guides : undefined,
-    });
+    schema.addProperty(
+      new GenerationSchemaProperty(name, def.type, {
+        description: def.description,
+        optional: def.optional,
+        guides: def.guides,
+      }),
+    );
   }
 }
 
@@ -459,18 +488,30 @@ export function afmSchemaFormat(schema: JsonSchema, isRoot = true): JsonSchema {
 // GeneratedContent
 // ---------------------------------------------------------------------------
 
+const _contentRegistry = new FinalizationRegistry((pointer: NativePointer) => {
+  try {
+    getFunctions().FMRelease(pointer);
+  } catch (err) {
+    console.warn("[tsfm] GeneratedContent cleanup via FinalizationRegistry failed:", err);
+  }
+});
+
 /**
  * The structured content returned from guided-generation requests.
+ *
+ * Call `dispose()` when done to release the underlying C object immediately;
+ * otherwise it is released automatically when the instance is garbage collected.
  */
 export class GeneratedContent {
   /** @internal */
-  _nativeContent: NativePointer;
+  _nativeContent: NativePointer | null;
 
   private _parsed: JsonObject | null = null;
 
   /** @internal */
   constructor(pointer: NativePointer) {
     this._nativeContent = pointer;
+    _contentRegistry.register(this, pointer, this);
   }
 
   /** Create GeneratedContent from a JSON string (mirrors Python's GeneratedContent.from_json()). */
@@ -486,14 +527,23 @@ export class GeneratedContent {
     return new GeneratedContent(pointer);
   }
 
+  /** @internal Throws if the content has been disposed. */
+  private _assertNotDisposed(): void {
+    if (!this._nativeContent) {
+      throw new Error("GeneratedContent has been disposed");
+    }
+  }
+
   get isComplete(): boolean {
-    return getFunctions().FMGeneratedContentIsComplete(this._nativeContent) as boolean;
+    this._assertNotDisposed();
+    return getFunctions().FMGeneratedContentIsComplete(this._nativeContent!) as boolean;
   }
 
   /** Returns the raw JSON string of the generated content. */
   toJson(): string {
+    this._assertNotDisposed();
     const pointer = getFunctions().FMGeneratedContentGetJSONString(
-      this._nativeContent,
+      this._nativeContent!,
     ) as NativePointer | null;
     return decodeAndFreeString(pointer) ?? "{}";
   }
@@ -501,7 +551,14 @@ export class GeneratedContent {
   /** Returns the parsed JSON object. */
   toObject(): JsonObject {
     if (!this._parsed) {
-      this._parsed = JSON.parse(this.toJson());
+      const json = this.toJson();
+      try {
+        this._parsed = JSON.parse(json);
+      } catch {
+        throw new Error(
+          `Failed to parse generated content as JSON. Raw content: ${json.slice(0, 200)}`,
+        );
+      }
     }
     return this._parsed!;
   }
@@ -521,8 +578,9 @@ export class GeneratedContent {
    * Throws if the property is not found by either path.
    */
   value<T = unknown>(propertyName: string): T {
+    this._assertNotDisposed();
     const pointer = getFunctions().FMGeneratedContentGetPropertyValue(
-      this._nativeContent,
+      this._nativeContent!,
       propertyName,
       null,
       null,
@@ -541,5 +599,18 @@ export class GeneratedContent {
       return obj[propertyName] as T;
     }
     throw new Error(`Property '${propertyName}' not found in generated content`);
+  }
+
+  /** Release the underlying C content object. Safe to call multiple times. */
+  dispose(): void {
+    if (this._nativeContent) {
+      _contentRegistry.unregister(this);
+      getFunctions().FMRelease(this._nativeContent);
+      this._nativeContent = null;
+    }
+  }
+
+  [Symbol.dispose](): void {
+    this.dispose();
   }
 }

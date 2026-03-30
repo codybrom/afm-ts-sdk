@@ -80,14 +80,19 @@ export class Transcript {
 
   /** Export the transcript as a parsed dictionary (mirrors Python's Transcript.to_dict()). */
   toDict(): JsonObject {
-    return JSON.parse(this.toJson());
+    const json = this.toJson();
+    try {
+      return JSON.parse(json);
+    } catch {
+      throw new FoundationModelsError(`Failed to parse transcript JSON: ${json.slice(0, 200)}`);
+    }
   }
 
   /** Return the typed transcript entries from the native JSON. */
   entries(): TranscriptEntry[] {
-    const data = JSON.parse(this.toJson());
-    const entries = data?.transcript?.entries;
-    return Array.isArray(entries) ? entries : [];
+    const data = this.toDict();
+    const entries = (data as { transcript?: { entries?: unknown[] } })?.transcript?.entries;
+    return Array.isArray(entries) ? (entries as TranscriptEntry[]) : [];
   }
 
   /** Deserialize a previously exported transcript JSON string. */

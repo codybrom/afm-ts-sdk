@@ -29,6 +29,7 @@ export {
   type PropertyDef,
   type InferSchema,
   type PropertyType,
+  type NativeTypeName,
   type JsonSchema,
   type JsonObject,
 } from "./schema.js";

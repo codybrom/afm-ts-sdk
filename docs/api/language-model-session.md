@@ -94,10 +94,23 @@ cancel(): void
 
 ### `dispose()`
 
-Release the native session. Access `transcript` before calling this.
+Release session resources. Access `transcript` before calling this. Safe to call multiple times.
 
 ```ts
 dispose(): void
+```
+
+After disposal:
+
+- `respond()`, `respondWithSchema()`, `respondWithJsonSchema()`, and `streamResponse()` throw `FoundationModelsError`
+- `prewarm()`, `cancel()`, and `isResponding` are silent no-ops
+
+Also supports `Symbol.dispose` for use with TC39 Explicit Resource Management:
+
+```ts
+using session = new LanguageModelSession();
+const reply = await session.respond("Hello");
+// session is released when the block exits
 ```
 
 ## Properties

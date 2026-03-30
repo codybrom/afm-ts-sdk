@@ -90,7 +90,7 @@ const schema = new GenerationSchema("Person", "A person profile")
     description: "Age in years",
     guides: [GenerationGuide.range(0, 120)],
   })
-  .property("tags", "array", {
+  .property("tags", "array<string>", {
     guides: [GenerationGuide.maxItems(5)],
     optional: true,
   });
@@ -98,7 +98,13 @@ const schema = new GenerationSchema("Person", "A person profile")
 
 ### Property Types
 
-`"string"` | `"integer"` | `"number"` | `"boolean"` | `"array"` | `"object"`
+Scalar types: `"string"` | `"integer"` | `"number"` | `"boolean"` | `"object"`
+
+Array types use a compound form: `"array<string>"` | `"array<integer>"` | `"array<number>"` | `"array<boolean>"` | `"array<SchemaName>"`
+
+::: warning
+Bare `"array"` is not accepted by `GenerationSchema.property()`. Use the compound form (e.g. `"array<string>"`) or use `generable()` which resolves array types automatically.
+:::
 
 ## Generation Guides
 

@@ -905,6 +905,143 @@ describe("LanguageModelSession", () => {
     });
   });
 
+  describe("disposed session guard", () => {
+    it("respond throws on disposed session", async () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      await expect(session.respond("Hi")).rejects.toThrow("Session has been disposed");
+    });
+
+    it("respondWithSchema throws on disposed session", async () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      const mockSchema = { _nativeSchema: "mock-schema-pointer" };
+      await expect(session.respondWithSchema("Hi", mockSchema as never)).rejects.toThrow(
+        "Session has been disposed",
+      );
+    });
+
+    it("respondWithJsonSchema throws on disposed session", async () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      await expect(
+        session.respondWithJsonSchema("Hi", { type: "object", properties: {} }),
+      ).rejects.toThrow("Session has been disposed");
+    });
+
+    it("streamResponse throws on disposed session", async () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      const chunks: string[] = [];
+      try {
+        for await (const chunk of session.streamResponse("Hi")) {
+          chunks.push(chunk);
+        }
+        expect.unreachable("Should have thrown");
+      } catch (err) {
+        expect((err as Error).message).toContain("Session has been disposed");
+      }
+      expect(chunks).toEqual([]);
+    });
+
+    it("dispose is idempotent — second call is a no-op", () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      // FMRelease should have been called once during the first dispose
+      const releaseCount = mockFns.FMRelease.mock.calls.length;
+      session.dispose(); // second call
+      expect(mockFns.FMRelease).toHaveBeenCalledTimes(releaseCount);
+    });
+
+    it("cancel is a no-op after dispose", () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      expect(() => session.cancel()).not.toThrow();
+    });
+
+    it("prewarm is a no-op after dispose", () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      expect(() => session.prewarm("test")).not.toThrow();
+      expect(mockFns.FMLanguageModelSessionPrewarm).not.toHaveBeenCalled();
+    });
+
+    it("isResponding returns false after dispose", () => {
+      const session = new LanguageModelSession();
+      session.dispose();
+      expect(session.isResponding).toBe(false);
+    });
+  });
+
+  describe("queued request after dispose", () => {
+    it("respond rejects at execution time if disposed while queued", async () => {
+      // Verify the execution-time guard: even if the call-time check passes,
+      // the private _respondText check catches a mid-queue dispose.
+      // We simulate this by manually resolving the queue after dispose.
+      const session = new LanguageModelSession();
+
+      // Block the queue with a long-running first request that we control
+      let resolveBlocker!: () => void;
+      const blocker = new Promise<void>((r) => (resolveBlocker = r));
+      // Manually chain a blocker onto the queue so respond() waits
+      (session as unknown as { _queue: Promise<void> })._queue = blocker;
+
+      const second = session.respond("second");
+
+      // Dispose while second is waiting in the queue
+      session.dispose();
+
+      // Now unblock the queue — _respondText should hit the dispose guard
+      resolveBlocker();
+
+      await expect(second).rejects.toThrow("Session has been disposed");
+      // The C API should never have been called for the second request
+      expect(mockFns.FMLanguageModelSessionRespond).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("streamResponse setup failure does not stall queue", () => {
+    it("subsequent respond() succeeds after streamResponse setup throws", async () => {
+      const session = new LanguageModelSession();
+
+      // Make the native stream call throw to simulate a setup failure
+      mockFns.FMLanguageModelSessionStreamResponse.mockImplementationOnce(() => {
+        throw new Error("native stream setup failed");
+      });
+
+      // streamResponse should propagate the error
+      const chunks: string[] = [];
+      try {
+        for await (const chunk of session.streamResponse("Hi")) {
+          chunks.push(chunk);
+        }
+        expect.unreachable("Should have thrown");
+      } catch (err) {
+        expect((err as Error).message).toBe("native stream setup failed");
+      }
+
+      // The queue should NOT be stalled — a subsequent respond() must work.
+      // Set up a normal mock response.
+      mockFns.FMLanguageModelSessionRespond.mockImplementation(
+        (
+          _session: unknown,
+          _prompt: unknown,
+          _opts: unknown,
+          _ui: unknown,
+          _cbPointer: unknown,
+        ) => {
+          setTimeout(() => {
+            lastRegisteredCallback?.(0, "response text", 13, null);
+          }, 0);
+          return "mock-task";
+        },
+      );
+
+      const result = await session.respond("Next prompt");
+      expect(result).toBe("response text");
+    });
+  });
+
   describe("prewarm", () => {
     it("calls C API with prompt prefix", () => {
       const session = new LanguageModelSession();

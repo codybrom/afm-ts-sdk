@@ -4,7 +4,9 @@ import { FoundationModelsError } from "./errors.js";
 const _modelRegistry = new FinalizationRegistry((pointer: NativePointer) => {
   try {
     getFunctions().FMRelease(pointer);
-  } catch {}
+  } catch (err) {
+    console.warn("[tsfm] Model cleanup via FinalizationRegistry failed:", err);
+  }
 });
 
 export enum SystemLanguageModelUseCase {
@@ -130,7 +132,13 @@ export class SystemLanguageModel {
     ) as NativePointer | null;
     const json = decodeAndFreeString(pointer);
     if (!json) return [];
-    return JSON.parse(json) as string[];
+    try {
+      return JSON.parse(json) as string[];
+    } catch {
+      throw new FoundationModelsError(
+        `Failed to parse supported languages JSON: ${json.slice(0, 200)}`,
+      );
+    }
   }
 
   /**

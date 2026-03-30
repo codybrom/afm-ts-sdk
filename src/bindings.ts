@@ -20,7 +20,11 @@ function findDylib(): string {
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return candidates[0]; // let koffi produce the real error
+  throw new Error(
+    `Could not find libFoundationModels.dylib.\n` +
+      `Searched:\n${candidates.map((c) => `  - ${c}`).join("\n")}\n` +
+      `Run 'npm run build' to compile the native library. Requires macOS 26+, Xcode 26+.`,
+  );
 }
 
 let _lib: ReturnType<typeof koffi.load> | null = null;
