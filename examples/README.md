@@ -34,3 +34,6 @@ npx tsx examples/<name>/<name>.ts
 | [generation-options](./generation-options/) | Sampling modes, temperature, and token limits |
 | [transcript](./transcript/) | Session history persistence and resumption |
 | [content-tagging](./content-tagging/) | Content classification with CONTENT_TAGGING use case |
+| [contact-card](./contact-card/) | Extract structured contacts from messy text with nested generable() schemas |
+| [journal](./journal/) | Private mood-tracking journal with real tool calls and transcript persistence |
+| [email-triage](./email-triage/) | Inbox triage with JSON Schema, streaming drafts, and per-call generation options |

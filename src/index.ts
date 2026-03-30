@@ -24,7 +24,12 @@ export {
   GenerationGuide,
   GuideType,
   GeneratedContent,
+  generable,
+  type Generable,
+  type PropertyDef,
+  type InferSchema,
   type PropertyType,
+  type NativeTypeName,
   type JsonSchema,
   type JsonObject,
 } from "./schema.js";

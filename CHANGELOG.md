@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `generable()` — declarative typed schema builder for structured output with full TypeScript type inference, the equivalent of the Python SDK's `@generable` decorator
+- `SystemLanguageModel.contextSize` — read the model's context window size (back-deployed from macOS 26.4 SDK)
+- `SystemLanguageModel.supportedLanguages` — list supported language codes
+- `SystemLanguageModel.supportsLocale()` — check if a specific locale is supported
+- `LanguageModelSession.prewarm()` — preload model resources and optionally cache a prompt prefix to reduce first-response latency
+- `GeneratedContent.dispose()` / `Symbol.dispose` — explicit resource cleanup for structured output results, with `FinalizationRegistry` auto-cleanup as a safety net
+- `NativeTypeName` type export — compound array type names (`"array<string>"`, `"array<integer>"`, etc.) for use with `GenerationSchema.property()`
+- `decodeString()` — decode a C string pointer without freeing it, for use in callbacks where the C side owns the memory
+- `Tool.onCall` now receives parsed arguments as a second parameter: `(toolName, args)` instead of `(toolName)`
+- Input validation: `temperature` must be ≥ 0, `maximumResponseTokens` must be a positive integer — both throw immediately on invalid values
+- Explicit FFI type casts (`as NativePointer`, `as boolean`, etc.) at all C call sites
+- 3 new examples: `contact-card` (nested generable schemas), `email-triage` (JSON Schema + streaming + tools), `journal` (tools + transcript persistence)
+- ESLint: `no-floating-promises` and `no-console` for `src/`, `no-eval` and `no-debugger` globally
+- Unit tests for `generable()`, streaming edge cases, compat `reorderJson` with array items, disposed session guards, stream queue-stall recovery, and all 3 new examples
+
+### Fixed
+
+- Stream setup failures no longer stall the request queue permanently (native init moved inside try/finally)
+- Stream idle timeout (30s) prevents permanent hangs when native callbacks stop firing after tool-call snapshots
+- Disposed session methods (`respond`, `respondWithSchema`, `respondWithJsonSchema`, `streamResponse`) now throw `FoundationModelsError` immediately instead of calling into freed native memory
+- `FinalizationRegistry` callbacks across all classes now log warnings via `console.warn` instead of silently swallowing errors
+- Better error message when `libFoundationModels.dylib` is not found — lists all searched paths and suggests `npm run build`
+- Streaming callback now receives content as `void*` instead of `str` to prevent koffi from coercing null C string pointers to the JS string `"null"`
+- Streaming iterator now resets the session (`FMLanguageModelSessionReset`) on early `break` to prevent stalled subsequent calls
+- Coerced `"null"` string chunks from koffi are filtered out during streaming
+
+### Changed
+
+- `generable()` array properties now use compound type names (`"array<string>"`, `"array<Name>"`) matching the Python SDK's C bridge convention
+- `GenerationSchema.property()` rejects bare `"array"` type — use compound form like `"array<string>"` or use `generable()` for automatic type resolution
+- Prettier scope widened from `src/` to entire repo (excluding `*.md`); added `.prettierignore`
+- Standardized "Apple Foundation Models" terminology (dropped possessive "'s") across docs and config
+- README license section rewritten with copyright notice and Apple trademark disclaimer
+- `docs/tsconfig.json` added for VitePress theme type checking
+- CSS: added `.VPHero .tagline` max-width constraints for responsive layout
+
 ## [0.3.1] - 2026-03-12
 
 ### Added
@@ -121,7 +159,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- TypeScript/Node.js bindings for Apple's Foundation Models framework via koffi FFI
+- TypeScript/Node.js bindings for Apple Foundation Models framework via koffi FFI
 - `SystemLanguageModel` class with availability checks and `waitUntilAvailable()`
 - `LanguageModelSession` with `respond()`, `streamResponse()`, and `respondWithJsonSchema()` for text, streaming, and structured generation
 - `GenerationSchema` and `GenerationSchemaProperty` for typed structured output with generation guides
